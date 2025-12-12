@@ -7,7 +7,7 @@
   ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)
   ![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8DB.svg?logo=tauri&logoColor=white)
   ![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=white)
-  ![License](https://img.shields.io/badge/license-MIT-green.svg)
+  ![License](https://img.shields.io/badge/license-AGPL%20v3-blue.svg)
 </div>
 
 ---
@@ -19,7 +19,7 @@
 - **AI 图片生成** - 支持文生图、图生图，可配置分辨率和比例
 - **AI 视频生成** - 基于 Sora 模型的视频生成
 - **LLM 文本生成** - 支持多模态输入（文本/图片/PDF）
-- **PPT 工作流** - 自动生成大纲、页面图片，导出 PPTX
+- **PPT 工作流** - 自动生成大纲、PPT页面，导出可编辑文字的 PPTX
 
 ## 截图预览
 
@@ -114,3 +114,8 @@ docker-compose up -d
 | 后端 | Tauri 2 (Rust) |
 | 状态 | Zustand + IndexedDB |
 | 节点 | @xyflow/react |
+
+## 许可证
+
+本项目基于 [GNU Affero General Public License v3](https://www.gnu.org/licenses/agpl-3.0.html) 发行，详细条款请参阅仓库根目录的 `LICENSE` 文件。
+IT

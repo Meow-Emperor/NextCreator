@@ -19,7 +19,7 @@ export const PROJECT_INFO = {
   name: "NextCreator",
   description: "基于可视化节点的 AI 内容生成工作流工具",
   author: "MoonWeSif",
-  license: "MIT",
+  license: "AGPL-3.0",
 };
 
 export interface UpdateInfo {
