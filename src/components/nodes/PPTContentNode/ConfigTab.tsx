@@ -1,13 +1,15 @@
 import { useRef, useState } from "react";
-import { Settings, FileText, AlignLeft, StickyNote, Cpu, ChevronDown, Check, Info } from "lucide-react";
+import { Settings, FileText, AlignLeft, StickyNote, Cpu, ChevronDown, Check, Image } from "lucide-react";
 import type { PPTContentNodeData, PageCountRange, DetailLevel } from "./types";
-import { OUTLINE_PRESET_MODELS } from "./types";
+import { OUTLINE_PRESET_MODELS, IMAGE_PRESET_MODELS } from "./types";
 
 interface ConfigTabProps {
   config: PPTContentNodeData["outlineConfig"];
   outlineModel: string;
+  imageModel: string;
   onChange: (config: Partial<PPTContentNodeData["outlineConfig"]>) => void;
   onModelChange: (model: string) => void;
+  onImageModelChange: (model: string) => void;
 }
 
 // 页数范围选项
@@ -25,12 +27,15 @@ const detailLevelOptions: { value: DetailLevel; label: string; desc: string }[] 
   { value: "detailed", label: "详细", desc: "要点丰富，讲稿详细" },
 ];
 
-export function ConfigTab({ config, outlineModel, onChange, onModelChange }: ConfigTabProps) {
+export function ConfigTab({ config, outlineModel, imageModel, onChange, onModelChange, onImageModelChange }: ConfigTabProps) {
   // IME 输入处理
   const isComposingRef = useRef(false);
   // 模型下拉菜单状态
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [customModel, setCustomModel] = useState("");
+  // 图片生成模型下拉菜单状态
+  const [showImageModelDropdown, setShowImageModelDropdown] = useState(false);
+  const [customImageModel, setCustomImageModel] = useState("");
 
   // 检查是否是自定义模型
   const isCustomModel = !OUTLINE_PRESET_MODELS.some((m) => m.value === outlineModel);
@@ -53,6 +58,30 @@ export function ConfigTab({ config, outlineModel, onChange, onModelChange }: Con
     if (customModel.trim()) {
       onModelChange(customModel.trim());
       setShowModelDropdown(false);
+    }
+  };
+
+  // 检查是否是自定义图片模型
+  const isCustomImageModel = !IMAGE_PRESET_MODELS.some((m) => m.value === imageModel);
+
+  // 获取显示的图片模型名称
+  const getDisplayImageModelName = () => {
+    const preset = IMAGE_PRESET_MODELS.find((m) => m.value === imageModel);
+    return preset ? preset.label : imageModel;
+  };
+
+  // 选择预设图片模型
+  const handleSelectImageModel = (value: string) => {
+    onImageModelChange(value);
+    setShowImageModelDropdown(false);
+    setCustomImageModel("");
+  };
+
+  // 使用自定义图片模型
+  const handleCustomImageModelSubmit = () => {
+    if (customImageModel.trim()) {
+      onImageModelChange(customImageModel.trim());
+      setShowImageModelDropdown(false);
     }
   };
 
@@ -239,6 +268,78 @@ export function ConfigTab({ config, outlineModel, onChange, onModelChange }: Con
         )}
       </div>
 
+      {/* 页面图片生成模型选择 */}
+      <div className="relative">
+        <label className="flex items-center gap-1.5 text-xs font-medium text-base-content/70 mb-2">
+          <Image className="w-3.5 h-3.5" />
+          页面图片生成模型
+        </label>
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-3 py-2 bg-base-200 hover:bg-base-300 rounded-lg text-sm transition-colors border border-base-300 nopan nodrag"
+          onClick={() => setShowImageModelDropdown(!showImageModelDropdown)}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <span className={isCustomImageModel ? "text-primary font-medium" : ""}>
+            {getDisplayImageModelName()}
+          </span>
+          <ChevronDown className={`w-4 h-4 transition-transform ${showImageModelDropdown ? "rotate-180" : ""}`} />
+        </button>
+
+        {/* 下拉菜单 */}
+        {showImageModelDropdown && (
+          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-base-100 border border-base-300 rounded-lg shadow-xl overflow-hidden">
+            {/* 预设模型 */}
+            {IMAGE_PRESET_MODELS.map((model) => (
+              <button
+                key={model.value}
+                type="button"
+                className={`w-full px-3 py-2 text-left text-sm hover:bg-base-200 transition-colors flex items-center justify-between nopan nodrag ${
+                  imageModel === model.value ? "bg-primary/10 text-primary" : ""
+                }`}
+                onClick={() => handleSelectImageModel(model.value)}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <span>{model.label}</span>
+                {imageModel === model.value && <Check className="w-4 h-4" />}
+              </button>
+            ))}
+
+            {/* 分隔线 */}
+            <div className="border-t border-base-300 my-1" />
+
+            {/* 自定义模型输入 */}
+            <div className="p-2">
+              <label className="text-xs text-base-content/60 mb-1 block">自定义模型</label>
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  className="input input-sm input-bordered flex-1 text-sm nopan nodrag"
+                  placeholder="输入模型名称..."
+                  value={customImageModel}
+                  onChange={(e) => setCustomImageModel(e.target.value)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleCustomImageModelSubmit();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary nopan nodrag"
+                  onClick={handleCustomImageModelSubmit}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  disabled={!customImageModel.trim()}
+                >
+                  确定
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 配置摘要提示 */}
       <div className="bg-base-200 rounded-lg p-3 text-xs">
         <div className="flex items-start gap-2">
@@ -248,20 +349,6 @@ export function ConfigTab({ config, outlineModel, onChange, onModelChange }: Con
             <p className="opacity-60">
               将生成约 {config.pageCountRange === "custom" ? (config.customPageCount || 8) : config.pageCountRange.replace("-", "-")} 页，
               {detailLevelOptions.find(o => o.value === config.detailLevel)?.desc}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 页面图片生成说明 */}
-      <div className="bg-info/10 rounded-lg p-3 text-xs">
-        <div className="flex items-start gap-2">
-          <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-info" />
-          <div>
-            <p className="font-medium mb-1 text-info">页面图片生成</p>
-            <p className="opacity-70">
-              页面图片使用 NanoBanana Pro 节点配置的供应商生成，
-              推荐使用 gemini-3-pro-image-preview 模型。
             </p>
           </div>
         </div>

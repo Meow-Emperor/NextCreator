@@ -7,10 +7,7 @@ import { editImage } from "@/services/imageService";
 import { saveImage, isTauriEnvironment } from "@/services/fileStorageService";
 import { generateThumbnail } from "@/utils/imageCompression";
 import type { PPTContentNodeData, PPTOutline, PPTPageItem, ConnectedImageInfo } from "./types";
-import { buildSystemPrompt, buildPageImagePrompt, getVisualStylePrompt, PPT_OUTLINE_JSON_SCHEMA, DEFAULT_OUTLINE_MODEL } from "./types";
-
-// 页面图片生成使用的模型
-const IMAGE_MODEL = "gemini-3-pro-image-preview";
+import { buildSystemPrompt, buildPageImagePrompt, getVisualStylePrompt, PPT_OUTLINE_JSON_SCHEMA, DEFAULT_OUTLINE_MODEL, DEFAULT_IMAGE_MODEL } from "./types";
 
 interface UsePPTContentExecutionProps {
   nodeId: string;
@@ -336,11 +333,13 @@ export function usePPTContentExecution({
           inputImages.push(...supplementImages.map(img => img.imageData));
         }
 
-        // 使用模板基底图 + 完整提示词生成 PPT 页面（固定使用 Pro 模型）
+        // 使用模板基底图 + 完整提示词生成 PPT 页面
+        // 使用用户配置的图片模型或默认模型
+        const imageModelToUse = data.imageModel || DEFAULT_IMAGE_MODEL;
         const response = await editImage(
           {
             prompt,
-            model: IMAGE_MODEL,
+            model: imageModelToUse,
             inputImages,
             aspectRatio: data.imageConfig.aspectRatio,
             imageSize: data.imageConfig.imageSize,
@@ -460,7 +459,7 @@ export function usePPTContentExecution({
         abortControllersRef.current.delete(pageId);
       }
     },
-    [data.pages, data.imageConfig.aspectRatio, data.imageConfig.imageSize, data.visualStyleTemplate, getTemplateImage, nodeId, updatePageState]
+    [data.pages, data.imageConfig.aspectRatio, data.imageConfig.imageSize, data.imageModel, data.visualStyleTemplate, getTemplateImage, nodeId, updatePageState]
   );
 
   // 开始批量生成（并发执行所有待处理任务）

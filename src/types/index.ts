@@ -1,7 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 
-// 模型类型（图片生成）
-export type ModelType = "gemini-2.5-flash-image" | "gemini-3-pro-image-preview";
+// 模型类型（图片生成）- 支持自定义模型名称
+export type ModelType = string;
 
 // 视频模型类型
 export type VideoModelType = "sora-2";

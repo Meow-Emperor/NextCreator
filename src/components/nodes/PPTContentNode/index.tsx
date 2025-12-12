@@ -224,8 +224,10 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
             <ConfigTab
               config={data.outlineConfig}
               outlineModel={data.outlineModel || "gemini-3-pro-preview"}
+              imageModel={data.imageModel || "gemini-3-pro-image-preview"}
               onChange={handleConfigChange}
               onModelChange={(model) => updateNodeData<PPTContentNodeData>(id, { outlineModel: model })}
+              onImageModelChange={(model) => updateNodeData<PPTContentNodeData>(id, { imageModel: model })}
             />
             {/* 弹性空间 */}
             <div className="flex-1" />

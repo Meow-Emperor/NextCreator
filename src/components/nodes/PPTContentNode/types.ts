@@ -113,6 +113,15 @@ export const OUTLINE_PRESET_MODELS = [
 // 默认大纲模型
 export const DEFAULT_OUTLINE_MODEL = "gemini-3-pro-preview";
 
+// 页面图片生成模型 - 预设选项
+export const IMAGE_PRESET_MODELS = [
+  { value: "gemini-2.5-flash-image", label: "NanoBanana" },
+  { value: "gemini-3-pro-image-preview", label: "NanoBanana Pro(推荐)" },
+];
+
+// 默认图片生成模型
+export const DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview";
+
 // 视觉风格模板类型
 export type VisualStyleTemplate = "academic" | "business" | "tech";
 
@@ -133,6 +142,8 @@ export interface PPTContentNodeData {
   };
   // 大纲生成使用的模型
   outlineModel: string;
+  // 页面图片生成使用的模型
+  imageModel: string;
 
   // === 大纲标签页 ===
   outlineStatus: "idle" | "generating" | "ready" | "error";

@@ -129,6 +129,7 @@ export const nodeCategories: NodeCategory[] = [
             additionalNotes: "",
           },
           outlineModel: "gemini-3-pro-preview",
+          imageModel: "gemini-3-pro-image-preview",
           outlineStatus: "idle",
           imageConfig: {
             aspectRatio: "16:9",
