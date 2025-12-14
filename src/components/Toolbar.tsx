@@ -32,7 +32,7 @@ export function Toolbar({ onOpenHelp }: { onOpenHelp?: () => void }) {
     const { nodes, edges } = useFlowStore.getState();
     const data = { nodes, edges };
     const jsonStr = JSON.stringify(data, null, 2);
-    const fileName = `sif-workflow-${Date.now()}.json`;
+    const fileName = `next-workflow-${Date.now()}.json`;
 
     if (isTauriEnvironment()) {
       try {

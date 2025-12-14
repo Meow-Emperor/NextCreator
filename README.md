@@ -42,7 +42,7 @@
 
 ## 快速开始
 
-前往 [Releases](https://github.com/MoonWeSif/SIFCreator/releases) 下载最新版本：
+前往 [Releases](https://github.com/MoonWeSif/NextCreator/releases) 下载最新版本：
 
 - **macOS (Apple Silicon)**: `NextCreator_*_aarch64.dmg`
 - **macOS (Intel)**: `NextCreator_*_x64.dmg`

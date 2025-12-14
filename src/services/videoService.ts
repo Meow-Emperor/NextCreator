@@ -1,5 +1,7 @@
 import type { VideoGenerationParams, VideoTaskResponse, VideoGenerationResponse } from "@/types";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { isTauriEnvironment } from "@/services/fileStorageService";
+import { toast } from "@/stores/toastStore";
 
 // 任务阶段类型
 export type VideoTaskStage = "queued" | "in_progress" | "completed" | "failed";
@@ -29,9 +31,14 @@ function getApiConfig() {
     throw new Error("供应商 API Key 未配置");
   }
 
+  // 处理 baseUrl：移除末尾斜杠和版本路径后缀（/v1beta, /v1 等）
+  let baseUrl = provider.baseUrl
+    .replace(/\/+$/, "")           // 移除末尾斜杠
+    .replace(/\/v1(beta)?$/, "");  // 移除 /v1 或 /v1beta 后缀
+
   return {
     apiKey: provider.apiKey,
-    baseUrl: provider.baseUrl,
+    baseUrl,
   };
 }
 
@@ -46,6 +53,10 @@ export async function createVideoTask(params: VideoGenerationParams): Promise<Vi
 
     if (params.seconds) {
       formData.append("seconds", params.seconds);
+    }
+
+    if (params.size) {
+      formData.append("size", params.size);
     }
 
     // 如果有参考图片，添加到请求中
@@ -160,6 +171,7 @@ export async function getVideoContentBlobUrl(taskId: string): Promise<{ url?: st
 export async function downloadVideo(taskId: string, filename?: string): Promise<{ success: boolean; error?: string }> {
   try {
     const { apiKey, baseUrl } = getApiConfig();
+    const defaultFileName = filename || `sora-video-${Date.now()}.mp4`;
 
     const response = await fetch(`${baseUrl}/v1/videos/${taskId}/content`, {
       method: "GET",
@@ -174,19 +186,47 @@ export async function downloadVideo(taskId: string, filename?: string): Promise<
     }
 
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename || `sora-video-${taskId}.mp4`;
-    link.click();
+    if (isTauriEnvironment()) {
+      // Tauri 环境：使用保存对话框
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeFile } = await import("@tauri-apps/plugin-fs");
 
-    // 清理 Blob URL
-    URL.revokeObjectURL(url);
+      const filePath = await save({
+        defaultPath: defaultFileName,
+        filters: [{ name: "视频", extensions: ["mp4", "webm", "mov"] }],
+      });
 
-    return { success: true };
+      if (filePath) {
+        // 将 blob 转换为 Uint8Array
+        const arrayBuffer = await blob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+
+        await writeFile(filePath, bytes);
+        toast.success(`视频已保存到: ${filePath.split("/").pop()}`);
+        return { success: true };
+      } else {
+        // 用户取消了保存
+        return { success: false };
+      }
+    } else {
+      // 浏览器环境：使用传统下载
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = defaultFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // 清理 Blob URL
+      URL.revokeObjectURL(url);
+      toast.success("视频下载已开始");
+      return { success: true };
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "下载视频失败";
+    toast.error(`下载失败: ${message}`);
     return { success: false, error: message };
   }
 }

@@ -103,6 +103,7 @@ export const nodeCategories: NodeCategory[] = [
           label: "视频生成",
           model: "sora-2",
           seconds: "10",
+          size: "1280x720",
           status: "idle",
         },
         inputs: ["prompt", "image"],

@@ -4,7 +4,10 @@ import type { Node, Edge } from "@xyflow/react";
 export type ModelType = string;
 
 // 视频模型类型
-export type VideoModelType = "sora-2";
+export type VideoModelType = "sora-2" | "sora-2-pro";
+
+// 视频尺寸类型
+export type VideoSizeType = "720x1280" | "1280x720" | "1024x1792" | "1792x1024";
 
 // LLM 模型类型（支持自定义模型名称）
 export type LLMModelType = string;
@@ -13,7 +16,8 @@ export type LLMModelType = string;
 export interface VideoGenerationParams {
   prompt: string;
   model: VideoModelType;
-  seconds?: "5" | "10" | "15" | "20";
+  seconds?: "10" | "15" | "25";  // sora-2: 10/15, sora-2-pro: 10/15/25
+  size?: VideoSizeType;
   inputImage?: string; // base64 编码的参考图片
 }
 
@@ -105,6 +109,7 @@ export interface VideoGeneratorNodeData {
   label: string;
   model: VideoModelType;
   seconds: VideoGenerationParams["seconds"];
+  size?: VideoSizeType;
   status: "idle" | "loading" | "success" | "error";
   taskId?: string;
   taskStage?: "queued" | "in_progress" | "completed" | "failed"; // 任务阶段

@@ -1,30 +1,53 @@
 import { memo, useCallback, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { Video, Play, AlertCircle, Square, Download, Clock, CheckCircle2, Eye } from "lucide-react";
+import { Video, Play, AlertCircle, Square, Download, CheckCircle2, Eye, X, Settings2, Link2Off, Loader2 } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { createVideoTask, getVideoContentBlobUrl, downloadVideo, type VideoTaskStage } from "@/services/videoService";
 import { taskManager } from "@/services/taskManager";
 import { useLoadingDots } from "@/hooks/useLoadingDots";
-import type { VideoGeneratorNodeData, VideoModelType } from "@/types";
+import type { VideoGeneratorNodeData, VideoModelType, VideoSizeType } from "@/types";
 
 // 定义节点类型
 type VideoGeneratorNode = Node<VideoGeneratorNodeData>;
 
-// 时长选项
-const secondsOptions = [
-  { value: "5", label: "5 秒" },
-  { value: "10", label: "10 秒" },
-  { value: "15", label: "15 秒" },
-  { value: "20", label: "20 秒" },
+// 模型选项
+const modelOptions: { value: VideoModelType; label: string }[] = [
+  { value: "sora-2", label: "Sora 2" },
+  { value: "sora-2-pro", label: "Sora 2 Pro" },
+];
+
+// 根据模型获取可用的秒数选项
+function getSecondsOptions(model: VideoModelType) {
+  if (model === "sora-2-pro") {
+    return [
+      { value: "10", label: "10秒" },
+      { value: "15", label: "15秒" },
+      { value: "25", label: "25秒" },
+    ];
+  }
+  // sora-2
+  return [
+    { value: "10", label: "10秒" },
+    { value: "15", label: "15秒" },
+  ];
+}
+
+// 尺寸选项
+const sizeOptions: { value: VideoSizeType; label: string }[] = [
+  { value: "1280x720", label: "16:9 横版" },
+  { value: "720x1280", label: "9:16 竖版" },
+  { value: "1792x1024", label: "宽屏" },
+  { value: "1024x1792", label: "长屏" },
 ];
 
 // 任务阶段配置
-const stageConfig: Record<VideoTaskStage, { label: string; color: string; icon: React.ComponentType<{ className?: string }> | null }> = {
-  queued: { label: "排队中", color: "text-warning", icon: Clock },
-  in_progress: { label: "生成中", color: "text-info", icon: null }, // 使用文字动画
-  completed: { label: "已完成", color: "text-success", icon: CheckCircle2 },
-  failed: { label: "失败", color: "text-error", icon: AlertCircle },
+const stageConfig: Record<VideoTaskStage, { label: string; color: string }> = {
+  queued: { label: "排队中", color: "text-warning" },
+  in_progress: { label: "生成中", color: "text-info" },
+  completed: { label: "已完成", color: "text-success" },
+  failed: { label: "失败", color: "text-error" },
 };
 
 export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoGeneratorNode>) => {
@@ -33,11 +56,18 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
   const [previewState, setPreviewState] = useState<"idle" | "loading" | "ready">("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // 省略号加载动画
-  const dots = useLoadingDots(data.status === "loading" || previewState === "loading");
+  const dots = useLoadingDots(data.status === "loading" || previewState === "loading" || isDownloading);
 
-  const model: VideoModelType = "sora-2";
+  // 当前模型
+  const currentModel = data.model || "sora-2";
+
+  // 检测是否连接了提示词
+  const { prompt: connectedPrompt } = getConnectedInputData(id);
+  const isPromptConnected = !!connectedPrompt;
 
   // 清理函数 - 清理预览 URL
   useEffect(() => {
@@ -113,8 +143,9 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
       // 1. 创建任务
       const createResult = await createVideoTask({
         prompt,
-        model,
-        seconds: data.seconds,
+        model: currentModel,
+        seconds: data.seconds || "10",
+        size: data.size || "1280x720",
         inputImage: image,
       });
 
@@ -145,7 +176,7 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
         taskStage: "failed",
       });
     }
-  }, [id, model, data.seconds, activeCanvasId, updateNodeData, getConnectedInputData, handleClosePreview]);
+  }, [id, currentModel, data.seconds, data.size, activeCanvasId, updateNodeData, getConnectedInputData, handleClosePreview]);
 
   const handleStop = useCallback(() => {
     // 取消任务管理器中的任务
@@ -161,17 +192,48 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
   }, [id, activeCanvasId, updateNodeData]);
 
   const handleDownload = useCallback(async () => {
-    if (!data.taskId) return;
+    if (!data.taskId || isDownloading) return;
+    setIsDownloading(true);
     await downloadVideo(data.taskId);
-  }, [data.taskId]);
+    setIsDownloading(false);
+  }, [data.taskId, isDownloading]);
+
+  // 更新模型
+  const handleModelChange = useCallback((model: VideoModelType) => {
+    const newSeconds = model === "sora-2" && data.seconds === "25" ? "15" : data.seconds;
+    updateNodeData<VideoGeneratorNodeData>(id, {
+      model,
+      seconds: newSeconds,
+    });
+  }, [id, data.seconds, updateNodeData]);
 
   // 获取当前阶段配置
   const currentStage = data.taskStage ? stageConfig[data.taskStage] : null;
-  const StageIcon = currentStage?.icon;
 
   // 节点样式配置
   const headerGradient = "bg-gradient-to-r from-cyan-500 to-blue-500";
   const outputHandleColor = "!bg-blue-500";
+
+  // 获取状态显示
+  const getStatusDisplay = () => {
+    if (data.status === "loading" && currentStage) {
+      if (data.taskStage === "in_progress") {
+        return <span className="text-info">生成中{dots} {data.progress || 0}%</span>;
+      }
+      return <span className={currentStage.color}>{currentStage.label}</span>;
+    }
+    if (data.status === "success") {
+      return <span className="text-success flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />已完成</span>;
+    }
+    if (data.status === "error") {
+      return <span className="text-error flex items-center gap-1"><AlertCircle className="w-3 h-3" />失败</span>;
+    }
+    // 检测是否连接了提示词
+    if (!isPromptConnected) {
+      return <span className="text-base-content/40 flex items-center gap-1"><Link2Off className="w-3 h-3" />待连接</span>;
+    }
+    return <span className="text-success/70">就绪</span>;
+  };
 
   return (
     <>
@@ -204,32 +266,29 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
             <Video className="w-4 h-4 text-white" />
             <span className="text-sm font-medium text-white">{data.label}</span>
           </div>
-          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white">SORA</span>
+          <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white uppercase">
+            {currentModel === "sora-2-pro" ? "PRO" : "STD"}
+          </span>
         </div>
 
-        {/* 节点内容 */}
+        {/* 节点内容 - 简化显示 */}
         <div className="p-2 space-y-2 nodrag">
-          {/* 配置选项 */}
+          {/* 模型选择 - 按钮样式 */}
           <div>
-            <label className="text-xs text-base-content/60 mb-0.5 block">视频时长</label>
+            <label className="text-xs text-base-content/60 mb-1 block">模型</label>
             <div className="flex gap-1">
-              {secondsOptions.map((opt) => (
+              {modelOptions.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   className={`
-                    btn btn-xs flex-1
-                    ${ (data.seconds || "10") === opt.value
-                      ? "btn-info"
-                      : "btn-ghost bg-base-200"
-                    }
+                    btn btn-xs flex-1 h-7
+                    ${currentModel === opt.value ? "btn-info" : "btn-ghost bg-base-200"}
                   `}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
-                    updateNodeData<VideoGeneratorNodeData>(id, {
-                      seconds: opt.value as VideoGeneratorNodeData["seconds"],
-                    });
+                    handleModelChange(opt.value);
                   }}
                 >
                   {opt.label}
@@ -238,46 +297,41 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
             </div>
           </div>
 
-          {/* 任务状态显示 */}
-          {data.status === "loading" && currentStage && (
-            <div className="space-y-2">
-              {/* 阶段状态 */}
-              <div className={`flex items-center gap-2 text-xs ${currentStage.color}`}>
-                {data.taskStage === "in_progress" ? (
-                  <span className="font-medium">生成中{dots}</span>
-                ) : StageIcon ? (
-                  <>
-                    <StageIcon className="w-3.5 h-3.5" />
-                    <span className="font-medium">{currentStage.label}</span>
-                  </>
-                ) : (
-                  <span className="font-medium">{currentStage.label}</span>
-                )}
-                {data.taskId && (
-                  <span className="text-base-content/40 text-[10px] ml-auto truncate max-w-[80px]">
-                    {data.taskId}
-                  </span>
-                )}
-              </div>
+          {/* 配置摘要（简化显示） */}
+          <div className="flex items-center justify-between text-xs text-base-content/60">
+            <span>{data.seconds || "10"}秒 · {sizeOptions.find(s => s.value === (data.size || "1280x720"))?.label}</span>
+            <button
+              className="btn btn-ghost btn-xs px-1"
+              onClick={() => setIsDetailModalOpen(true)}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-              {/* 进度条 */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-base-content/60">
-                  <span>进度</span>
-                  <span>{data.progress || 0}%</span>
-                </div>
-                <progress
-                  className={`progress w-full h-2 ${
-                    data.taskStage === "queued" ? "progress-warning" : "progress-info"
-                  }`}
-                  value={data.progress || 0}
-                  max="100"
-                />
-              </div>
+          {/* 状态显示 */}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-base-content/60">状态：</span>
+            {getStatusDisplay()}
+          </div>
+
+          {/* 错误信息 */}
+          {data.status === "error" && data.error && (
+            <div className="flex items-center gap-1 text-error text-xs">
+              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{data.error}</span>
             </div>
           )}
 
-          {/* 生成/停止按钮 */}
+          {/* 预览加载错误 */}
+          {previewError && (
+            <div className="flex items-center gap-1 text-error text-xs">
+              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{previewError}</span>
+            </div>
+          )}
+
+          {/* 操作按钮 */}
           {data.status === "loading" ? (
             <button
               className="btn btn-sm btn-error w-full gap-2"
@@ -285,8 +339,41 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
               onPointerDown={(e) => e.stopPropagation()}
             >
               <Square className="w-4 h-4" />
-              停止生成
+              停止
             </button>
+          ) : data.status === "success" ? (
+            <div className="flex gap-2">
+              <button
+                className={`btn btn-xs btn-outline flex-1 gap-1 ${previewState === "loading" ? "btn-disabled" : ""}`}
+                onClick={handleOpenPreview}
+                onPointerDown={(e) => e.stopPropagation()}
+                disabled={previewState === "loading"}
+              >
+                {previewState === "loading" ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <>
+                    <Eye className="w-3 h-3" />
+                    预览
+                  </>
+                )}
+              </button>
+              <button
+                className={`btn btn-xs btn-outline flex-1 gap-1 ${isDownloading ? "btn-disabled" : ""}`}
+                onClick={handleDownload}
+                onPointerDown={(e) => e.stopPropagation()}
+                disabled={isDownloading}
+              >
+                {isDownloading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <>
+                    <Download className="w-3 h-3" />
+                    下载
+                  </>
+                )}
+              </button>
+            </div>
           ) : (
             <button
               className="btn btn-sm btn-info w-full gap-2"
@@ -296,60 +383,6 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
               <Play className="w-4 h-4" />
               生成视频
             </button>
-          )}
-
-          {/* 错误信息 */}
-          {data.status === "error" && data.error && (
-            <div className="flex items-center gap-2 text-error text-xs">
-              <AlertCircle className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{data.error}</span>
-            </div>
-          )}
-
-          {/* 视频完成后的操作区域 */}
-          {data.status === "success" && (
-            <div className="space-y-2">
-              {/* 完成状态提示 */}
-              <div className="flex items-center gap-2 text-xs text-success">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span className="font-medium">视频生成完成</span>
-              </div>
-
-              {/* 预览加载错误 */}
-              {previewError && (
-                <div className="flex items-center gap-2 text-error text-xs">
-                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{previewError}</span>
-                </div>
-              )}
-
-              {/* 操作按钮 */}
-              <div className="flex gap-2">
-                <button
-                  className={`btn btn-xs btn-outline flex-1 gap-1 ${previewState === "loading" ? "btn-disabled" : ""}`}
-                  onClick={handleOpenPreview}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  disabled={previewState === "loading"}
-                >
-                  {previewState === "loading" ? (
-                    <span>加载中{dots}</span>
-                  ) : (
-                    <>
-                      <Eye className="w-3 h-3" />
-                      预览
-                    </>
-                  )}
-                </button>
-                <button
-                  className="btn btn-xs btn-outline flex-1 gap-1"
-                  onClick={handleDownload}
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <Download className="w-3 h-3" />
-                  下载
-                </button>
-              </div>
-            </div>
           )}
         </div>
 
@@ -361,6 +394,16 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
           className={`!w-3 !h-3 ${outputHandleColor} !border-2 !border-white`}
         />
       </div>
+
+      {/* 详情配置弹窗 */}
+      {isDetailModalOpen && (
+        <VideoDetailModal
+          data={data}
+          nodeId={id}
+          onClose={() => setIsDetailModalOpen(false)}
+          onUpdateData={(updates) => updateNodeData<VideoGeneratorNodeData>(id, updates)}
+        />
+      )}
 
       {/* 预览弹窗 */}
       {previewState === "ready" && previewUrl && (
@@ -376,6 +419,210 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
 
 VideoGeneratorNode.displayName = "VideoGeneratorNode";
 
+// 视频详情配置弹窗
+interface VideoDetailModalProps {
+  data: VideoGeneratorNodeData;
+  nodeId: string;
+  onClose: () => void;
+  onUpdateData: (updates: Partial<VideoGeneratorNodeData>) => void;
+}
+
+function VideoDetailModal({ data, onClose, onUpdateData }: VideoDetailModalProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const currentModel = data.model || "sora-2";
+  const secondsOptions = getSecondsOptions(currentModel);
+
+  // 进入动画
+  useEffect(() => {
+    requestAnimationFrame(() => setIsVisible(true));
+  }, []);
+
+  // 关闭时先播放退出动画
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setIsVisible(false);
+    setTimeout(onClose, 200);
+  }, [onClose]);
+
+  // ESC 键关闭
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleClose]);
+
+  // 获取当前阶段配置
+  const currentStage = data.taskStage ? stageConfig[data.taskStage] : null;
+
+  return createPortal(
+    <div
+      className={`
+        fixed inset-0 z-[9999] flex items-center justify-center p-4
+        transition-all duration-200 ease-out
+        ${isVisible && !isClosing ? "bg-black/60" : "bg-black/0"}
+      `}
+      onClick={handleClose}
+    >
+      <div
+        className={`
+          w-full max-w-md bg-base-100 rounded-2xl shadow-2xl overflow-hidden
+          transition-all duration-200 ease-out
+          ${isVisible && !isClosing
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4"
+          }
+        `}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 头部 */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-500">
+          <div className="flex items-center gap-2">
+            <Video className="w-5 h-5 text-white" />
+            <span className="text-base font-medium text-white">视频生成设置</span>
+          </div>
+          <button
+            className="btn btn-circle btn-ghost btn-sm text-white hover:bg-white/20"
+            onClick={handleClose}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="p-4 space-y-4">
+          {/* 模型选择 */}
+          <div>
+            <label className="text-sm font-medium text-base-content mb-2 block">模型</label>
+            <div className="flex gap-2">
+              {modelOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`
+                    btn btn-sm flex-1
+                    ${currentModel === opt.value ? "btn-info" : "btn-ghost bg-base-200"}
+                  `}
+                  onClick={() => {
+                    const newSeconds = opt.value === "sora-2" && data.seconds === "25" ? "15" : data.seconds;
+                    onUpdateData({ model: opt.value, seconds: newSeconds });
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 时长选择 */}
+          <div>
+            <label className="text-sm font-medium text-base-content mb-2 block">视频时长</label>
+            <div className="flex gap-2">
+              {secondsOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`
+                    btn btn-sm flex-1
+                    ${(data.seconds || "10") === opt.value ? "btn-info" : "btn-ghost bg-base-200"}
+                  `}
+                  onClick={() => onUpdateData({ seconds: opt.value as VideoGeneratorNodeData["seconds"] })}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 尺寸选择 */}
+          <div>
+            <label className="text-sm font-medium text-base-content mb-2 block">视频尺寸</label>
+            <div className="grid grid-cols-2 gap-2">
+              {sizeOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={`
+                    btn btn-sm
+                    ${(data.size || "1280x720") === opt.value ? "btn-info" : "btn-ghost bg-base-200"}
+                  `}
+                  onClick={() => onUpdateData({ size: opt.value })}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 任务状态详情 */}
+          {(data.status === "loading" || data.status === "success" || data.status === "error") && (
+            <div className="border-t border-base-300 pt-4 space-y-3">
+              <h4 className="text-sm font-medium text-base-content">任务状态</h4>
+
+              {/* 任务ID */}
+              {data.taskId && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-base-content/60">任务ID</span>
+                  <span className="text-base-content font-mono truncate max-w-[200px]">{data.taskId}</span>
+                </div>
+              )}
+
+              {/* 状态 */}
+              {currentStage && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-base-content/60">状态</span>
+                  <span className={currentStage.color}>{currentStage.label}</span>
+                </div>
+              )}
+
+              {/* 进度条 */}
+              {data.status === "loading" && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-base-content/60">
+                    <span>进度</span>
+                    <span>{data.progress || 0}%</span>
+                  </div>
+                  <progress
+                    className={`progress w-full h-2 ${
+                      data.taskStage === "queued" ? "progress-warning" : "progress-info"
+                    }`}
+                    value={data.progress || 0}
+                    max="100"
+                  />
+                </div>
+              )}
+
+              {/* 错误信息 */}
+              {data.status === "error" && data.error && (
+                <div className="flex items-start gap-2 text-error text-xs bg-error/10 p-2 rounded">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{data.error}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 底部 */}
+        <div className="flex items-center justify-end px-4 py-3 bg-base-200/50 border-t border-base-300">
+          <span className="text-xs text-base-content/50 mr-auto">
+            按 ESC 关闭
+          </span>
+          <button className="btn btn-ghost btn-sm" onClick={handleClose}>
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // 视频预览弹窗组件
 interface VideoPreviewModalProps {
   videoUrl: string;
@@ -387,7 +634,6 @@ function VideoPreviewModal({ videoUrl, taskId, onClose }: VideoPreviewModalProps
   const [isDownloading, setIsDownloading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const downloadDots = useLoadingDots(isDownloading);
 
   // 进入动画
   useEffect(() => {
@@ -422,10 +668,10 @@ function VideoPreviewModal({ videoUrl, taskId, onClose }: VideoPreviewModalProps
     setIsDownloading(false);
   }, [taskId, isDownloading]);
 
-  return (
+  return createPortal(
     <div
       className={`
-        fixed inset-0 z-50 flex items-center justify-center
+        fixed inset-0 z-[9999] flex items-center justify-center
         transition-all duration-200 ease-out
         ${isVisible && !isClosing ? "bg-black/80" : "bg-black/0"}
       `}
@@ -455,7 +701,10 @@ function VideoPreviewModal({ videoUrl, taskId, onClose }: VideoPreviewModalProps
             disabled={isDownloading}
           >
             {isDownloading ? (
-              <span>下载中{downloadDots}</span>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                下载中
+              </>
             ) : (
               <>
                 <Download className="w-4 h-4" />
@@ -478,6 +727,7 @@ function VideoPreviewModal({ videoUrl, taskId, onClose }: VideoPreviewModalProps
           点击背景、按 ESC 或关闭按钮关闭窗口
         </p>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
