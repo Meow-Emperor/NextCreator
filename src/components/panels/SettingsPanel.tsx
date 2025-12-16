@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Save,
@@ -15,6 +16,7 @@ import {
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Select } from "@/components/ui/Select";
+import { useModal, getModalAnimationClasses } from "@/hooks/useModal";
 import type { AppSettings } from "@/types";
 import {
   checkForUpdates,
@@ -44,6 +46,15 @@ export function SettingsPanel() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   // 重置确认对话框
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // 使用统一的 modal hook
+  const { isVisible, isClosing, handleClose, handleBackdropClick } = useModal({
+    isOpen: isSettingsOpen,
+    onClose: closeSettings,
+  });
+
+  // 获取动画类名
+  const { backdropClasses, contentClasses } = getModalAnimationClasses(isVisible, isClosing);
 
   if (!isSettingsOpen) return null;
 
@@ -133,15 +144,31 @@ export function SettingsPanel() {
 
   const updateButtonProps = getUpdateButtonProps();
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in">
-      <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden max-h-[90vh] flex flex-col relative">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* 背景遮罩 */}
+      <div
+        className={`
+          absolute inset-0
+          transition-all duration-200 ease-out
+          ${backdropClasses}
+        `}
+        onClick={handleBackdropClick}
+      />
+      {/* Modal 内容 */}
+      <div
+        className={`
+          relative bg-base-100 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden max-h-[90vh] flex flex-col
+          transition-all duration-200 ease-out
+          ${contentClasses}
+        `}
+      >
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-base-300">
           <h2 className="text-lg font-semibold">设置</h2>
           <button
             className="btn btn-ghost btn-sm btn-circle"
-            onClick={closeSettings}
+            onClick={handleClose}
           >
             <X className="w-5 h-5" />
           </button>
@@ -302,7 +329,7 @@ export function SettingsPanel() {
             重置
           </button>
           <div className="flex gap-2">
-            <button className="btn btn-ghost" onClick={closeSettings}>
+            <button className="btn btn-ghost" onClick={handleClose}>
               取消
             </button>
             <button className="btn btn-primary gap-2" onClick={handleSave}>
@@ -340,6 +367,7 @@ export function SettingsPanel() {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

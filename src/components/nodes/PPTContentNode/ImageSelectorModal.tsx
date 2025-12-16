@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Check, Image } from "lucide-react";
 import type { ConnectedImageInfo } from "./types";
@@ -39,6 +39,17 @@ export const ImageSelectorModal = memo(({
     setIsVisible(false);
     setTimeout(onClose, 200);
   }, [onClose]);
+
+  // ESC 键关闭
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleClose]);
 
   // 确认选择
   const handleConfirm = useCallback(() => {

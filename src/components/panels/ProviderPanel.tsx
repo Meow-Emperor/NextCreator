@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Pencil, Trash2, Save, Server } from "lucide-react";
+import { createPortal } from "react-dom";
+import { X, Plus, Pencil, Trash2, Save, Server, AlertTriangle } from "lucide-react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
+import { useModal, getModalAnimationClasses } from "@/hooks/useModal";
 import type { Provider, NodeProviderMapping } from "@/types";
 
 // 节点类型配置
@@ -31,6 +33,17 @@ export function ProviderPanel() {
   // 编辑/添加供应商的弹窗状态
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [isAddingProvider, setIsAddingProvider] = useState(false);
+  // 删除确认状态
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+
+  // 使用统一的 modal hook
+  const { isVisible, isClosing, handleClose, handleBackdropClick } = useModal({
+    isOpen: isProviderPanelOpen,
+    onClose: closeProviderPanel,
+  });
+
+  // 获取动画类名
+  const { backdropClasses, contentClasses } = getModalAnimationClasses(isVisible, isClosing);
 
   // 同步初始值
   useEffect(() => {
@@ -53,24 +66,47 @@ export function ProviderPanel() {
     closeProviderPanel();
   };
 
-  // 删除供应商
-  const handleDeleteProvider = (id: string) => {
-    if (confirm("确定要删除此供应商吗？相关节点配置也会被清除。")) {
-      removeProvider(id);
-      // 同时清除本地状态中的映射
-      const newLocalNodeProviders = { ...localNodeProviders };
-      for (const key of Object.keys(newLocalNodeProviders) as (keyof NodeProviderMapping)[]) {
-        if (newLocalNodeProviders[key] === id) {
-          delete newLocalNodeProviders[key];
-        }
-      }
-      setLocalNodeProviders(newLocalNodeProviders);
-    }
+  // 删除供应商 - 显示确认弹窗
+  const handleDeleteProvider = (provider: Provider) => {
+    setDeleteConfirm({ id: provider.id, name: provider.name });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in">
-      <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+  // 执行确认的删除操作
+  const executeDelete = () => {
+    if (!deleteConfirm) return;
+    const { id } = deleteConfirm;
+    setDeleteConfirm(null);
+
+    removeProvider(id);
+    // 同时清除本地状态中的映射
+    const newLocalNodeProviders = { ...localNodeProviders };
+    for (const key of Object.keys(newLocalNodeProviders) as (keyof NodeProviderMapping)[]) {
+      if (newLocalNodeProviders[key] === id) {
+        delete newLocalNodeProviders[key];
+      }
+    }
+    setLocalNodeProviders(newLocalNodeProviders);
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* 背景遮罩 */}
+      <div
+        className={`
+          absolute inset-0
+          transition-all duration-200 ease-out
+          ${backdropClasses}
+        `}
+        onClick={handleBackdropClick}
+      />
+      {/* Modal 内容 */}
+      <div
+        className={`
+          relative bg-base-100 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden max-h-[90vh] flex flex-col
+          transition-all duration-200 ease-out
+          ${contentClasses}
+        `}
+      >
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-base-300">
           <div className="flex items-center gap-2">
@@ -79,7 +115,7 @@ export function ProviderPanel() {
           </div>
           <button
             className="btn btn-ghost btn-sm btn-circle"
-            onClick={closeProviderPanel}
+            onClick={handleClose}
           >
             <X className="w-5 h-5" />
           </button>
@@ -122,7 +158,7 @@ export function ProviderPanel() {
                       </button>
                       <button
                         className="btn btn-ghost btn-xs btn-square text-error"
-                        onClick={() => handleDeleteProvider(provider.id)}
+                        onClick={() => handleDeleteProvider(provider)}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -193,7 +229,7 @@ export function ProviderPanel() {
 
         {/* 底部 */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-base-300 bg-base-200/50">
-          <button className="btn btn-ghost" onClick={closeProviderPanel}>
+          <button className="btn btn-ghost" onClick={handleClose}>
             取消
           </button>
           <button className="btn btn-primary gap-2" onClick={handleSave}>
@@ -222,7 +258,17 @@ export function ProviderPanel() {
           }}
         />
       )}
-    </div>
+
+      {/* 删除确认弹窗 */}
+      {deleteConfirm && (
+        <DeleteConfirmModal
+          name={deleteConfirm.name}
+          onConfirm={executeDelete}
+          onClose={() => setDeleteConfirm(null)}
+        />
+      )}
+    </div>,
+    document.body
   );
 }
 
@@ -238,6 +284,15 @@ function ProviderEditModal({ provider, onSave, onClose }: ProviderEditModalProps
   const [apiKey, setApiKey] = useState(provider?.apiKey || "");
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl || "");
 
+  // 使用统一的 modal hook
+  const { isVisible, isClosing, handleClose, handleBackdropClick } = useModal({
+    isOpen: true,
+    onClose,
+  });
+
+  // 获取动画类名
+  const { backdropClasses, contentClasses } = getModalAnimationClasses(isVisible, isClosing);
+
   const isEditing = !!provider;
   const canSave = name.trim() && apiKey.trim() && baseUrl.trim();
 
@@ -251,8 +306,24 @@ function ProviderEditModal({ provider, onSave, onClose }: ProviderEditModalProps
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 animate-fade-in">
-      <div className="bg-base-100 rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      {/* 背景遮罩 */}
+      <div
+        className={`
+          absolute inset-0
+          transition-all duration-200 ease-out
+          ${backdropClasses}
+        `}
+        onClick={handleBackdropClick}
+      />
+      {/* Modal 内容 */}
+      <div
+        className={`
+          relative bg-base-100 rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden
+          transition-all duration-200 ease-out
+          ${contentClasses}
+        `}
+      >
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-base-300">
           <h3 className="font-semibold">
@@ -260,7 +331,7 @@ function ProviderEditModal({ provider, onSave, onClose }: ProviderEditModalProps
           </h3>
           <button
             className="btn btn-ghost btn-sm btn-circle"
-            onClick={onClose}
+            onClick={handleClose}
           >
             <X className="w-4 h-4" />
           </button>
@@ -308,7 +379,7 @@ function ProviderEditModal({ provider, onSave, onClose }: ProviderEditModalProps
 
         {/* 底部 */}
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-base-300 bg-base-200/50">
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>
+          <button className="btn btn-ghost btn-sm" onClick={handleClose}>
             取消
           </button>
           <button
@@ -317,6 +388,70 @@ function ProviderEditModal({ provider, onSave, onClose }: ProviderEditModalProps
             disabled={!canSave}
           >
             {isEditing ? "保存" : "添加"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 删除确认弹窗组件
+interface DeleteConfirmModalProps {
+  name: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+function DeleteConfirmModal({ name, onConfirm, onClose }: DeleteConfirmModalProps) {
+  // 使用统一的 modal hook
+  const { isVisible, isClosing, handleClose, handleBackdropClick } = useModal({
+    isOpen: true,
+    onClose,
+  });
+
+  // 获取动画类名
+  const { backdropClasses, contentClasses } = getModalAnimationClasses(isVisible, isClosing);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      {/* 背景遮罩 */}
+      <div
+        className={`
+          absolute inset-0
+          transition-all duration-200 ease-out
+          ${backdropClasses}
+        `}
+        onClick={handleBackdropClick}
+      />
+      {/* Modal 内容 */}
+      <div
+        className={`
+          relative bg-base-100 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5
+          transition-all duration-200 ease-out
+          ${contentClasses}
+        `}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-error/10 rounded-lg">
+            <AlertTriangle className="w-5 h-5 text-error" />
+          </div>
+          <h3 className="font-semibold">确认删除</h3>
+        </div>
+        <p className="text-sm text-base-content/70 mb-5">
+          确定要删除供应商「{name}」吗？相关节点配置也会被清除，此操作不可撤销。
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleClose}
+          >
+            取消
+          </button>
+          <button
+            className="btn btn-error btn-sm"
+            onClick={onConfirm}
+          >
+            确认删除
           </button>
         </div>
       </div>

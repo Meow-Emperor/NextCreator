@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useFlowStore } from "@/stores/flowStore";
 import { useStorageManagementStore } from "@/stores/storageManagementStore";
+import { useModal, getModalAnimationClasses } from "@/hooks/useModal";
 import { isTauriEnvironment } from "@/services/fileStorageService";
 import { toast } from "@/stores/toastStore";
 import logoImage from "@/assets/logo.png";
@@ -210,41 +211,76 @@ export function Toolbar({ onOpenHelp }: { onOpenHelp?: () => void }) {
       </div>
 
       {/* 清空画布确认对话框 */}
-      {showClearConfirm &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-            <div
-              className="absolute inset-0 bg-black/50"
-              onClick={() => setShowClearConfirm(false)}
-            />
-            <div className="relative bg-base-100 rounded-xl p-5 mx-4 max-w-sm shadow-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-error/10 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-error" />
-                </div>
-                <h3 className="font-semibold">确认清空</h3>
-              </div>
-              <p className="text-sm text-base-content/70 mb-5">
-                确定要清空画布吗？这将删除画布上的所有节点和连线，此操作不可撤销。
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setShowClearConfirm(false)}
-                >
-                  取消
-                </button>
-                <button
-                  className="btn btn-error btn-sm"
-                  onClick={handleClearCanvas}
-                >
-                  确认清空
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      {showClearConfirm && (
+        <ClearConfirmModal
+          onConfirm={handleClearCanvas}
+          onClose={() => setShowClearConfirm(false)}
+        />
+      )}
     </div>
+  );
+}
+
+// 清空确认对话框组件
+interface ClearConfirmModalProps {
+  onConfirm: () => void;
+  onClose: () => void;
+}
+
+function ClearConfirmModal({ onConfirm, onClose }: ClearConfirmModalProps) {
+  // 使用统一的 modal hook
+  const { isVisible, isClosing, handleClose, handleBackdropClick } = useModal({
+    isOpen: true,
+    onClose,
+  });
+
+  // 获取动画类名
+  const { backdropClasses, contentClasses } = getModalAnimationClasses(isVisible, isClosing);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      {/* 背景遮罩 */}
+      <div
+        className={`
+          absolute inset-0
+          transition-all duration-200 ease-out
+          ${backdropClasses}
+        `}
+        onClick={handleBackdropClick}
+      />
+      {/* Modal 内容 */}
+      <div
+        className={`
+          relative bg-base-100 rounded-xl p-5 mx-4 max-w-sm shadow-xl
+          transition-all duration-200 ease-out
+          ${contentClasses}
+        `}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-error/10 rounded-lg">
+            <AlertTriangle className="w-5 h-5 text-error" />
+          </div>
+          <h3 className="font-semibold">确认清空</h3>
+        </div>
+        <p className="text-sm text-base-content/70 mb-5">
+          确定要清空画布吗？这将删除画布上的所有节点和连线，此操作不可撤销。
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={handleClose}
+          >
+            取消
+          </button>
+          <button
+            className="btn btn-error btn-sm"
+            onClick={onConfirm}
+          >
+            确认清空
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }

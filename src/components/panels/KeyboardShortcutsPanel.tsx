@@ -1,5 +1,6 @@
-import { useEffect } from "react";
 import { X, Keyboard } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useModal, getModalAnimationClasses } from "@/hooks/useModal";
 
 interface ShortcutGroup {
   title: string;
@@ -14,6 +15,15 @@ interface KeyboardShortcutsPanelProps {
 export function KeyboardShortcutsPanel({ isOpen, onClose }: KeyboardShortcutsPanelProps) {
   const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   const cmdKey = isMac ? "⌘" : "Ctrl";
+
+  // 使用统一的 modal hook
+  const { isVisible, isClosing, handleClose, handleBackdropClick } = useModal({
+    isOpen,
+    onClose,
+  });
+
+  // 获取动画类名
+  const { backdropClasses, contentClasses } = getModalAnimationClasses(isVisible, isClosing);
 
   const shortcutGroups: ShortcutGroup[] = [
     {
@@ -58,25 +68,29 @@ export function KeyboardShortcutsPanel({ isOpen, onClose }: KeyboardShortcutsPan
     },
   ];
 
-  // ESC 关闭面板
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) {
     return null;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-base-100 rounded-xl shadow-2xl w-[500px] max-h-[80vh] overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* 背景遮罩 */}
+      <div
+        className={`
+          absolute inset-0 backdrop-blur-sm
+          transition-all duration-200 ease-out
+          ${backdropClasses}
+        `}
+        onClick={handleBackdropClick}
+      />
+      {/* Modal 内容 */}
+      <div
+        className={`
+          relative bg-base-100 rounded-xl shadow-2xl w-[500px] max-h-[80vh] overflow-hidden
+          transition-all duration-200 ease-out
+          ${contentClasses}
+        `}
+      >
         {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-base-300">
           <div className="flex items-center gap-2">
@@ -85,7 +99,7 @@ export function KeyboardShortcutsPanel({ isOpen, onClose }: KeyboardShortcutsPan
           </div>
           <button
             className="btn btn-ghost btn-sm btn-circle"
-            onClick={onClose}
+            onClick={handleClose}
           >
             <X className="w-4 h-4" />
           </button>
@@ -133,6 +147,7 @@ export function KeyboardShortcutsPanel({ isOpen, onClose }: KeyboardShortcutsPan
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

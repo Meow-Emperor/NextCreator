@@ -67,8 +67,20 @@ export function Sidebar({ onDragStart }: SidebarProps) {
       }
     };
 
+    // ESC 键关闭菜单
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpenId(null);
+        setMenuPosition(null);
+      }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [menuOpenId]);
 
   // 打开菜单

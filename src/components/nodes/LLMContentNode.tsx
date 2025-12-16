@@ -26,8 +26,41 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [customModel, setCustomModel] = useState("");
   const [showFullPreview, setShowFullPreview] = useState(false);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [isPreviewClosing, setIsPreviewClosing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const previewModalRef = useRef<HTMLDivElement>(null);
+
+  // 预览弹窗进入动画
+  useEffect(() => {
+    if (showFullPreview) {
+      setIsPreviewClosing(false);
+      requestAnimationFrame(() => setIsPreviewVisible(true));
+    }
+  }, [showFullPreview]);
+
+  // 关闭预览弹窗（带动画）
+  const closePreview = useCallback(() => {
+    setIsPreviewClosing(true);
+    setIsPreviewVisible(false);
+    setTimeout(() => {
+      setShowFullPreview(false);
+      setIsPreviewClosing(false);
+    }, 200);
+  }, []);
+
+  // ESC 键关闭预览弹窗
+  useEffect(() => {
+    if (!showFullPreview) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closePreview();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showFullPreview, closePreview]);
 
   // 弹窗打开时自动聚焦，使键盘事件能被弹窗捕获
   useEffect(() => {
@@ -427,14 +460,28 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
 
       {/* 全屏预览弹窗 - 使用 Portal 渲染到 body */}
       {showFullPreview && data.outputContent && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60"
-          onClick={() => setShowFullPreview(false)}
-        >
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          {/* 背景遮罩 */}
+          <div
+            className={`
+              absolute inset-0
+              transition-all duration-200 ease-out
+              ${isPreviewVisible && !isPreviewClosing ? "bg-black/60" : "bg-black/0"}
+            `}
+            onClick={closePreview}
+          />
+          {/* Modal 内容 */}
           <div
             ref={previewModalRef}
             tabIndex={-1}
-            className="bg-base-100 rounded-xl shadow-2xl w-[90vw] max-w-4xl max-h-[85vh] flex flex-col outline-none"
+            className={`
+              relative bg-base-100 rounded-xl shadow-2xl w-[90vw] max-w-4xl max-h-[85vh] flex flex-col outline-none
+              transition-all duration-200 ease-out
+              ${isPreviewVisible && !isPreviewClosing
+                ? "opacity-100 scale-100 translate-y-0"
+                : "opacity-0 scale-95 translate-y-4"
+              }
+            `}
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               // 阻止键盘事件冒泡到 React Flow 画布
@@ -460,7 +507,7 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
                 </button>
                 <button
                   className="btn btn-ghost btn-sm btn-circle"
-                  onClick={() => setShowFullPreview(false)}
+                  onClick={closePreview}
                 >
                   <X className="w-5 h-5" />
                 </button>

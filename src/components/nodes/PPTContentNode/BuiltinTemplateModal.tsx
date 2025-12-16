@@ -69,6 +69,19 @@ export const BuiltinTemplateModal = memo(({ isOpen, onClose, onSelect }: Builtin
     }, 200);
   }, [onClose]);
 
+  // ESC 键关闭
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, handleClose]);
+
   // 处理选择确认
   const handleConfirm = useCallback(async () => {
     if (!selectedId) return;
