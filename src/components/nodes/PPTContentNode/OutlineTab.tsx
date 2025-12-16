@@ -56,6 +56,91 @@ function SupplementTextInput({ value, onChange }: { value: string; onChange: (te
   );
 }
 
+// 独立的文本输入组件，正确处理中文输入法
+function ComposableInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [localValue, setLocalValue] = useState(value);
+  const isComposingRef = useRef(false);
+
+  // 同步外部 value 变化
+  useEffect(() => {
+    if (!isComposingRef.current) {
+      setLocalValue(value);
+    }
+  }, [value]);
+
+  return (
+    <input
+      type="text"
+      className={className}
+      value={localValue}
+      placeholder={placeholder}
+      onChange={(e) => {
+        setLocalValue(e.target.value);
+        if (!isComposingRef.current) {
+          onChange(e.target.value);
+        }
+      }}
+      onCompositionStart={() => { isComposingRef.current = true; }}
+      onCompositionEnd={(e) => {
+        isComposingRef.current = false;
+        onChange(e.currentTarget.value);
+      }}
+    />
+  );
+}
+
+// 独立的文本域组件，正确处理中文输入法
+function ComposableTextarea({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [localValue, setLocalValue] = useState(value);
+  const isComposingRef = useRef(false);
+
+  // 同步外部 value 变化
+  useEffect(() => {
+    if (!isComposingRef.current) {
+      setLocalValue(value);
+    }
+  }, [value]);
+
+  return (
+    <textarea
+      className={className}
+      value={localValue}
+      placeholder={placeholder}
+      onChange={(e) => {
+        setLocalValue(e.target.value);
+        if (!isComposingRef.current) {
+          onChange(e.target.value);
+        }
+      }}
+      onCompositionStart={() => { isComposingRef.current = true; }}
+      onCompositionEnd={(e) => {
+        isComposingRef.current = false;
+        onChange(e.currentTarget.value);
+      }}
+    />
+  );
+}
+
 interface OutlineTabProps {
   outline?: PPTOutline;
   outlineStatus: PPTContentNodeData["outlineStatus"];
@@ -82,12 +167,6 @@ export function OutlineTab({
 
   // 图片选择器弹窗状态
   const [imageSelectorPage, setImageSelectorPage] = useState<number | null>(null);
-
-  // IME 输入处理 - 使用 Map 为每个输入框跟踪独立的 composing 状态
-  const composingMap = useRef(new Map<string, boolean>());
-
-  const getComposing = (key: string) => composingMap.current.get(key) || false;
-  const setComposing = (key: string, value: boolean) => composingMap.current.set(key, value);
 
   // 切换页面展开状态
   const togglePage = useCallback((index: number) => {
@@ -363,21 +442,11 @@ export function OutlineTab({
           {/* 标题编辑 - 更紧凑 */}
           <div className="flex items-center gap-2 px-1">
             <label className="text-xs text-base-content/50 whitespace-nowrap">标题</label>
-            <input
-              type="text"
+            <ComposableInput
               className="input input-bordered input-sm flex-1 font-medium"
               value={outline.title}
               placeholder="输入 PPT 标题..."
-              onChange={(e) => {
-                if (!getComposing('title')) {
-                  updateTitle(e.target.value);
-                }
-              }}
-              onCompositionStart={() => setComposing('title', true)}
-              onCompositionEnd={(e) => {
-                setComposing('title', false);
-                updateTitle(e.currentTarget.value);
-              }}
+              onChange={updateTitle}
             />
           </div>
 
@@ -469,21 +538,11 @@ export function OutlineTab({
                           <FileText className="w-3.5 h-3.5" />
                           页面标题
                         </label>
-                        <input
-                          type="text"
+                        <ComposableInput
                           className="input input-bordered input-sm w-full"
                           value={page.heading}
                           placeholder="输入页面标题..."
-                          onChange={(e) => {
-                            if (!getComposing(`heading-${index}`)) {
-                              updatePageField(index, "heading", e.target.value);
-                            }
-                          }}
-                          onCompositionStart={() => setComposing(`heading-${index}`, true)}
-                          onCompositionEnd={(e) => {
-                            setComposing(`heading-${index}`, false);
-                            updatePageField(index, "heading", e.currentTarget.value);
-                          }}
+                          onChange={(value) => updatePageField(index, "heading", value)}
                         />
                       </div>
 
@@ -499,21 +558,11 @@ export function OutlineTab({
                               <span className="text-xs text-primary/60 font-medium w-5 text-right">
                                 {pointIndex + 1}.
                               </span>
-                              <input
-                                type="text"
+                              <ComposableInput
                                 className="input input-bordered input-sm flex-1"
                                 value={point}
                                 placeholder="输入要点内容..."
-                                onChange={(e) => {
-                                  if (!getComposing(`point-${index}-${pointIndex}`)) {
-                                    updatePagePoint(index, pointIndex, e.target.value);
-                                  }
-                                }}
-                                onCompositionStart={() => setComposing(`point-${index}-${pointIndex}`, true)}
-                                onCompositionEnd={(e) => {
-                                  setComposing(`point-${index}-${pointIndex}`, false);
-                                  updatePagePoint(index, pointIndex, e.currentTarget.value);
-                                }}
+                                onChange={(value) => updatePagePoint(index, pointIndex, value)}
                               />
                               <button
                                 className="btn btn-ghost btn-xs btn-square text-error opacity-0 group-hover:opacity-100 transition-opacity"
@@ -540,21 +589,11 @@ export function OutlineTab({
                           <Image className="w-3.5 h-3.5" />
                           推荐配图（可选）
                         </label>
-                        <input
-                          type="text"
+                        <ComposableInput
                           className="input input-bordered input-sm w-full"
                           value={page.imageDesc || ""}
                           placeholder="描述适合的图表或示意图..."
-                          onChange={(e) => {
-                            if (!getComposing(`imageDesc-${index}`)) {
-                              updatePageField(index, "imageDesc", e.target.value);
-                            }
-                          }}
-                          onCompositionStart={() => setComposing(`imageDesc-${index}`, true)}
-                          onCompositionEnd={(e) => {
-                            setComposing(`imageDesc-${index}`, false);
-                            updatePageField(index, "imageDesc", e.currentTarget.value);
-                          }}
+                          onChange={(value) => updatePageField(index, "imageDesc", value)}
                         />
                       </div>
 
@@ -564,20 +603,11 @@ export function OutlineTab({
                           <Mic className="w-3.5 h-3.5" />
                           口头讲稿
                         </label>
-                        <textarea
+                        <ComposableTextarea
                           className="textarea textarea-bordered w-full min-h-[100px] resize-none text-sm"
                           value={page.script}
                           placeholder="输入演讲时的口头讲稿..."
-                          onChange={(e) => {
-                            if (!getComposing(`script-${index}`)) {
-                              updatePageField(index, "script", e.target.value);
-                            }
-                          }}
-                          onCompositionStart={() => setComposing(`script-${index}`, true)}
-                          onCompositionEnd={(e) => {
-                            setComposing(`script-${index}`, false);
-                            updatePageField(index, "script", e.currentTarget.value);
-                          }}
+                          onChange={(value) => updatePageField(index, "script", value)}
                         />
                       </div>
 
