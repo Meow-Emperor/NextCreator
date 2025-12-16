@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Handle, Position, type NodeProps, type Node, useReactFlow } from "@xyflow/react";
 import {
@@ -55,6 +55,15 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
   const [isScriptModalVisible, setIsScriptModalVisible] = useState(false);
   // 内置模板弹窗状态
   const [showBuiltinTemplateModal, setShowBuiltinTemplateModal] = useState(false);
+  // 讲稿弹窗 ref，用于自动聚焦
+  const scriptModalRef = useRef<HTMLDivElement>(null);
+
+  // 讲稿弹窗打开时自动聚焦，使键盘事件能被弹窗捕获
+  useEffect(() => {
+    if (showScriptModal && isScriptModalVisible && scriptModalRef.current) {
+      scriptModalRef.current.focus();
+    }
+  }, [showScriptModal, isScriptModalVisible]);
 
   // 处理详情面板的打开/关闭动画
   const openDetailPanel = useCallback(() => {
@@ -782,8 +791,10 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
           onClick={closeScriptModal}
         >
           <div
+            ref={scriptModalRef}
+            tabIndex={-1}
             className={`
-              bg-base-100 rounded-xl shadow-2xl w-[500px] max-h-[80vh] p-4
+              bg-base-100 rounded-xl shadow-2xl w-[500px] max-h-[80vh] p-4 outline-none
               transition-all duration-200 ease-out
               ${isScriptModalVisible
                 ? "opacity-100 scale-100 translate-y-0"
@@ -791,6 +802,7 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
               }
             `}
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">
@@ -811,7 +823,7 @@ export const PPTContentNode = memo(({ id, data, selected }: NodeProps<PPTContent
                 ))}
               </div>
             </div>
-            <div className="bg-base-200 rounded-lg p-3">
+            <div className="bg-base-200 rounded-lg p-3 select-text">
               <p className="text-sm leading-relaxed whitespace-pre-wrap">
                 {showScriptModal.script}
               </p>

@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, useRef } from "react";
+import { memo, useCallback, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { MessageSquareText, Play, AlertCircle, Copy, Check, ChevronDown, ChevronUp, FileUp, Eye, X } from "lucide-react";
@@ -27,6 +27,14 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
   const [customModel, setCustomModel] = useState("");
   const [showFullPreview, setShowFullPreview] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const previewModalRef = useRef<HTMLDivElement>(null);
+
+  // 弹窗打开时自动聚焦，使键盘事件能被弹窗捕获
+  useEffect(() => {
+    if (showFullPreview && previewModalRef.current) {
+      previewModalRef.current.focus();
+    }
+  }, [showFullPreview]);
 
   // 省略号加载动画
   const dots = useLoadingDots(data.status === "loading");
@@ -424,8 +432,14 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
           onClick={() => setShowFullPreview(false)}
         >
           <div
-            className="bg-base-100 rounded-xl shadow-2xl w-[90vw] max-w-4xl max-h-[85vh] flex flex-col"
+            ref={previewModalRef}
+            tabIndex={-1}
+            className="bg-base-100 rounded-xl shadow-2xl w-[90vw] max-w-4xl max-h-[85vh] flex flex-col outline-none"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              // 阻止键盘事件冒泡到 React Flow 画布
+              e.stopPropagation();
+            }}
           >
             {/* 弹窗头部 */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-base-300 flex-shrink-0">
@@ -453,7 +467,7 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
               </div>
             </div>
             {/* 弹窗内容 */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-6 select-text">
               <div className="prose prose-base max-w-none">
                 <ReactMarkdown
                   components={{
