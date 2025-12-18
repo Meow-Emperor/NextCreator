@@ -14,6 +14,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import type { CustomNode, CustomEdge, CustomNodeData } from "@/types";
 import type { WorkflowExecutionContext } from "@/types/workflow";
+import type { PromptNodeTemplate } from "@/config/promptConfig";
 import { validateConnection } from "@/utils/connectionValidator";
 import { WorkflowEngine } from "@/services/workflowEngine";
 import { useCanvasStore } from "@/stores/canvasStore";
@@ -43,6 +44,11 @@ interface FlowStore {
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   addNode: (type: string, position: { x: number; y: number }, data: CustomNodeData) => string;
+  addPromptTemplate: (
+    position: { x: number; y: number },
+    promptText: string,
+    template: PromptNodeTemplate
+  ) => string[];
   updateNodeData: <T extends CustomNodeData>(nodeId: string, data: Partial<T>) => void;
   removeNode: (nodeId: string) => void;
   removeNodes: (nodeIds: string[]) => void;
@@ -198,6 +204,110 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
       nodes: [...get().nodes, newNode],
     });
     return id;
+  },
+
+  // 添加提示词模板（创建多个已连接的节点）
+  addPromptTemplate: (position, promptText, template) => {
+    get().saveToHistory();
+
+    const nodeIds: string[] = [];
+    const newNodes: CustomNode[] = [];
+    const newEdges: CustomEdge[] = [];
+
+    // 节点尺寸和间距配置
+    const nodeWidth = 280;
+    const horizontalGap = 80;
+    let currentX = position.x;
+
+    // 1. 如果需要图片输入，创建图片输入节点
+    if (template.requiresImageInput) {
+      const imageInputId = uuidv4();
+      nodeIds.push(imageInputId);
+      newNodes.push({
+        id: imageInputId,
+        type: "imageInputNode",
+        position: { x: currentX, y: position.y },
+        data: {
+          label: "图片输入",
+        } as CustomNodeData,
+      });
+      currentX += nodeWidth + horizontalGap;
+    }
+
+    // 2. 创建提示词节点
+    const promptNodeId = uuidv4();
+    nodeIds.push(promptNodeId);
+    newNodes.push({
+      id: promptNodeId,
+      type: "promptNode",
+      position: { x: currentX, y: position.y + (template.requiresImageInput ? 100 : 0) },
+      data: {
+        label: "提示词",
+        prompt: promptText,
+      } as CustomNodeData,
+    });
+    currentX += nodeWidth + horizontalGap;
+
+    // 3. 创建图片生成节点
+    const generatorNodeId = uuidv4();
+    nodeIds.push(generatorNodeId);
+    const generatorType = template.generatorType === "pro"
+      ? "imageGeneratorProNode"
+      : "imageGeneratorFastNode";
+    const generatorLabel = template.generatorType === "pro"
+      ? "NanoBanana Pro"
+      : "NanoBanana";
+    const generatorModel = template.generatorType === "pro"
+      ? "gemini-3-pro-image-preview"
+      : "gemini-2.5-flash-image";
+
+    newNodes.push({
+      id: generatorNodeId,
+      type: generatorType,
+      position: { x: currentX, y: position.y + 50 },
+      data: {
+        label: generatorLabel,
+        model: generatorModel,
+        aspectRatio: template.aspectRatio,
+        imageSize: template.generatorType === "pro" ? "2K" : "1K",
+        status: "idle",
+      } as CustomNodeData,
+    });
+
+    // 4. 创建连接
+    // 提示词 -> 生成器
+    newEdges.push({
+      id: uuidv4(),
+      source: promptNodeId,
+      target: generatorNodeId,
+      sourceHandle: "output-prompt",
+      targetHandle: "input-prompt",
+      type: "smoothstep",
+      animated: true,
+    });
+
+    // 如果有图片输入，连接到生成器
+    if (template.requiresImageInput && nodeIds.length >= 3) {
+      const imageInputId = nodeIds[0];
+      newEdges.push({
+        id: uuidv4(),
+        source: imageInputId,
+        target: generatorNodeId,
+        sourceHandle: "output-image",
+        targetHandle: "input-image",
+        type: "smoothstep",
+        animated: true,
+      });
+    }
+
+    // 5. 更新状态
+    set({
+      nodes: [...get().nodes, ...newNodes],
+      edges: [...get().edges, ...newEdges],
+      selectedNodeIds: nodeIds,
+    });
+
+    return nodeIds;
   },
 
   updateNodeData: (nodeId, data) => {

@@ -218,3 +218,6 @@ export interface SettingsState {
   settings: AppSettings;
   isSettingsOpen: boolean;
 }
+
+// 提示词相关类型（从 promptConfig.ts 重新导出）
+export type { PromptCategory, PromptItem } from "@/config/promptConfig";

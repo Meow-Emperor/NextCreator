@@ -13,15 +13,20 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  BookText,
+  Eye,
 } from "lucide-react";
 import { useCanvasStore, type SidebarView } from "@/stores/canvasStore";
 import { nodeCategories, nodeIconMap, nodeIconColors } from "@/config/nodeConfig";
+import { promptCategories, promptIconMap, promptIconColors, type PromptItem } from "@/config/promptConfig";
 import { Input } from "@/components/ui/Input";
+import { PromptPreviewModal } from "@/components/ui/PromptPreviewModal";
 
 // 导航项定义
 const navItems: { id: SidebarView; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
   { id: "canvases", icon: LayoutGrid, label: "画布" },
   { id: "nodes", icon: Blocks, label: "节点" },
+  { id: "prompts", icon: BookText, label: "提示词" },
 ];
 
 interface SidebarProps {
@@ -53,6 +58,14 @@ export function Sidebar({ onDragStart }: SidebarProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(nodeCategories.map((c) => c.id))
   );
+
+  // 提示词面板相关状态
+  const [promptSearchQuery, setPromptSearchQuery] = useState("");
+  const [expandedPromptCategories, setExpandedPromptCategories] = useState<Set<string>>(
+    new Set(promptCategories.map((c) => c.id))
+  );
+  const [previewPrompt, setPreviewPrompt] = useState<PromptItem | null>(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -143,6 +156,30 @@ export function Sidebar({ onDragStart }: SidebarProps) {
     });
   }, []);
 
+  // 提示词面板操作
+  const togglePromptCategory = useCallback((categoryId: string) => {
+    setExpandedPromptCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  }, []);
+
+  // 打开提示词预览 Modal
+  const openPromptPreview = useCallback((prompt: PromptItem) => {
+    setPreviewPrompt(prompt);
+    setIsPreviewModalOpen(true);
+  }, []);
+
+  // 关闭提示词预览 Modal
+  const closePromptPreview = useCallback(() => {
+    setIsPreviewModalOpen(false);
+  }, []);
+
   // 过滤节点
   const filteredCategories = nodeCategories
     .map((category) => ({
@@ -154,6 +191,20 @@ export function Sidebar({ onDragStart }: SidebarProps) {
       ),
     }))
     .filter((category) => category.nodes.length > 0);
+
+  // 过滤提示词
+  const filteredPromptCategories = promptCategories
+    .map((category) => ({
+      ...category,
+      prompts: category.prompts.filter(
+        (prompt) =>
+          prompt.title.toLowerCase().includes(promptSearchQuery.toLowerCase()) ||
+          prompt.titleEn.toLowerCase().includes(promptSearchQuery.toLowerCase()) ||
+          prompt.description.toLowerCase().includes(promptSearchQuery.toLowerCase()) ||
+          prompt.tags.some((tag) => tag.toLowerCase().includes(promptSearchQuery.toLowerCase()))
+      ),
+    }))
+    .filter((category) => category.prompts.length > 0);
 
   // 获取当前打开菜单的画布
   const menuCanvas = menuOpenId ? canvases.find((c) => c.id === menuOpenId) : null;
@@ -376,6 +427,99 @@ export function Sidebar({ onDragStart }: SidebarProps) {
             </div>
           </>
         )}
+
+        {/* 提示词视图 */}
+        {sidebarView === "prompts" && (
+          <>
+            {/* 头部 */}
+            <div className="p-3 border-b border-base-300">
+              <h3 className="font-semibold text-sm mb-2">提示词库</h3>
+              <Input
+                isSearch
+                placeholder="搜索提示词..."
+                value={promptSearchQuery}
+                onChange={(e) => setPromptSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* 提示词列表 */}
+            <div className="flex-1 overflow-y-auto p-2">
+              {filteredPromptCategories.map((category) => {
+                const CategoryIcon = promptIconMap[category.icon];
+                const categoryColorClass = promptIconColors[category.icon] || "";
+                return (
+                  <div key={category.id} className="mb-2">
+                    <button
+                      className="flex items-center gap-2 w-full px-2 py-1.5 text-sm font-medium text-base-content/70 hover:text-base-content hover:bg-base-200 rounded-lg transition-colors"
+                      onClick={() => togglePromptCategory(category.id)}
+                    >
+                      {expandedPromptCategories.has(category.id) ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                      <div className={`p-1 rounded ${categoryColorClass}`}>
+                        {CategoryIcon && <CategoryIcon className="w-3 h-3" />}
+                      </div>
+                      <span className="truncate">{category.name}</span>
+                      <span className="text-xs text-base-content/40 ml-auto">
+                        {category.prompts.length}
+                      </span>
+                    </button>
+
+                    {expandedPromptCategories.has(category.id) && (
+                      <div className="mt-1 space-y-1">
+                        {category.prompts.map((prompt) => (
+                          <div
+                            key={prompt.id}
+                            className="draggable-prompt flex items-start gap-2 px-2 py-2 bg-base-200/50 hover:bg-base-200 rounded-lg transition-colors group cursor-grab"
+                            draggable
+                            onDragStart={(e) => {
+                              // 设置提示词模板数据
+                              e.dataTransfer.setData(
+                                "application/reactflow/prompt-template",
+                                JSON.stringify({
+                                  promptText: prompt.prompt,
+                                  template: prompt.nodeTemplate,
+                                })
+                              );
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                          >
+                            <GripVertical className="w-3 h-3 mt-1 text-base-content/30 group-hover:text-base-content/50 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{prompt.title}</div>
+                              <div className="text-xs text-base-content/50 truncate">
+                                {prompt.description}
+                              </div>
+                            </div>
+                            <button
+                              className="btn btn-ghost btn-xs btn-circle flex-shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openPromptPreview(prompt);
+                              }}
+                              title="预览提示词"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 底部提示 */}
+            <div className="p-3 border-t border-base-300">
+              <p className="text-xs text-base-content/40 text-center">
+                拖拽提示词到画布中使用
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
 
@@ -422,6 +566,13 @@ export function Sidebar({ onDragStart }: SidebarProps) {
       </ul>,
       document.body
     )}
+
+    {/* 提示词预览 Modal */}
+    <PromptPreviewModal
+      prompt={previewPrompt}
+      isOpen={isPreviewModalOpen}
+      onClose={closePromptPreview}
+    />
     </>
   );
 }

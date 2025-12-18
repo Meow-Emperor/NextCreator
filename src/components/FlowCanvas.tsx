@@ -57,6 +57,7 @@ export function FlowCanvas() {
     onEdgesChange,
     onConnect,
     addNode,
+    addPromptTemplate,
     setSelectedNode,
     setSelectedNodes,
     setSelectedEdges,
@@ -196,10 +197,7 @@ export function FlowCanvas() {
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const nodeType = event.dataTransfer.getData("application/reactflow/type");
-      const nodeDataStr = event.dataTransfer.getData("application/reactflow/data");
-
-      if (!nodeType || !reactFlowInstance.current) {
+      if (!reactFlowInstance.current) {
         return;
       }
 
@@ -208,10 +206,30 @@ export function FlowCanvas() {
         y: event.clientY,
       });
 
+      // 检查是否是提示词模板拖放
+      const promptTemplateStr = event.dataTransfer.getData("application/reactflow/prompt-template");
+      if (promptTemplateStr) {
+        try {
+          const { promptText, template } = JSON.parse(promptTemplateStr);
+          addPromptTemplate(position, promptText, template);
+        } catch (err) {
+          console.error("解析提示词模板数据失败:", err);
+        }
+        return;
+      }
+
+      // 普通节点拖放
+      const nodeType = event.dataTransfer.getData("application/reactflow/type");
+      const nodeDataStr = event.dataTransfer.getData("application/reactflow/data");
+
+      if (!nodeType) {
+        return;
+      }
+
       const defaultData = nodeDataStr ? JSON.parse(nodeDataStr) : {};
       addNode(nodeType, position, defaultData as CustomNodeData);
     },
-    [addNode]
+    [addNode, addPromptTemplate]
   );
 
   const onInit = useCallback((instance: ReactFlowInstance<CustomNode>) => {
