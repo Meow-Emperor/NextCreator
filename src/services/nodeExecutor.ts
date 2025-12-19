@@ -18,28 +18,28 @@ import { useCanvasStore } from "@/stores/canvasStore";
 import { generateImage, editImage } from "@/services/imageService";
 import { generateLLMContent } from "@/services/llmService";
 import { createVideoTask, pollVideoTask } from "@/services/videoService";
-import { saveImage, isTauriEnvironment } from "@/services/fileStorageService";
+import { saveImage, isTauriEnvironment, readImage } from "@/services/fileStorageService";
 
 // 自定义节点类型
 type CustomNode = Node<CustomNodeData>;
 
 /**
- * 从指定画布获取连接的输入数据
+ * 从指定画布获取连接的输入数据（异步版本，支持从文件加载图片）
  * 解决画布切换时数据读取错误的问题
  */
-function getConnectedInputDataFromCanvas(
+async function getConnectedInputDataFromCanvas(
   nodeId: string,
   canvasId: string
-): {
+): Promise<{
   prompt?: string;
   images: string[];
   files: Array<{ data: string; mimeType: string; fileName?: string }>;
-} {
+}> {
   const { activeCanvasId } = useCanvasStore.getState();
 
-  // 如果是当前活跃画布，直接使用 flowStore
+  // 如果是当前活跃画布，使用 flowStore 的异步版本
   if (canvasId === activeCanvasId) {
-    return useFlowStore.getState().getConnectedInputData(nodeId);
+    return useFlowStore.getState().getConnectedInputDataAsync(nodeId);
   }
 
   // 否则从 canvasStore 读取目标画布的数据
@@ -73,11 +73,31 @@ function getConnectedInputDataFromCanvas(
     } else if (targetHandle === "input-image") {
       let imageData: string | undefined;
       if (sourceNode.type === "imageInputNode") {
-        const data = sourceNode.data as { imageData?: string };
-        imageData = data.imageData;
+        const data = sourceNode.data as { imageData?: string; imagePath?: string };
+        // 优先从文件加载
+        if (data.imagePath) {
+          try {
+            imageData = await readImage(data.imagePath);
+          } catch (err) {
+            console.warn("从文件加载图片失败:", err);
+            imageData = data.imageData;
+          }
+        } else {
+          imageData = data.imageData;
+        }
       } else if (sourceNode.type === "imageGeneratorProNode" || sourceNode.type === "imageGeneratorFastNode") {
-        const data = sourceNode.data as { outputImage?: string };
-        imageData = data.outputImage;
+        const data = sourceNode.data as { outputImage?: string; outputImagePath?: string };
+        // 优先从文件加载
+        if (data.outputImagePath) {
+          try {
+            imageData = await readImage(data.outputImagePath);
+          } catch (err) {
+            console.warn("从文件加载图片失败:", err);
+            imageData = data.outputImage;
+          }
+        } else {
+          imageData = data.outputImage;
+        }
       }
       if (imageData) {
         images.push(imageData);
@@ -102,11 +122,33 @@ function getConnectedInputDataFromCanvas(
         const data = sourceNode.data as { outputContent?: string };
         prompt = data.outputContent;
       } else if (sourceNode.type === "imageInputNode") {
-        const data = sourceNode.data as { imageData?: string };
-        if (data.imageData) images.push(data.imageData);
+        const data = sourceNode.data as { imageData?: string; imagePath?: string };
+        let imageData: string | undefined;
+        if (data.imagePath) {
+          try {
+            imageData = await readImage(data.imagePath);
+          } catch (err) {
+            console.warn("从文件加载图片失败:", err);
+            imageData = data.imageData;
+          }
+        } else {
+          imageData = data.imageData;
+        }
+        if (imageData) images.push(imageData);
       } else if (sourceNode.type === "imageGeneratorProNode" || sourceNode.type === "imageGeneratorFastNode") {
-        const data = sourceNode.data as { outputImage?: string };
-        if (data.outputImage) images.push(data.outputImage);
+        const data = sourceNode.data as { outputImage?: string; outputImagePath?: string };
+        let imageData: string | undefined;
+        if (data.outputImagePath) {
+          try {
+            imageData = await readImage(data.outputImagePath);
+          } catch (err) {
+            console.warn("从文件加载图片失败:", err);
+            imageData = data.outputImage;
+          }
+        } else {
+          imageData = data.outputImage;
+        }
+        if (imageData) images.push(imageData);
       } else if (sourceNode.type === "fileUploadNode") {
         const data = sourceNode.data as { fileData?: string; mimeType?: string; fileName?: string };
         if (data.fileData && data.mimeType) {
@@ -168,8 +210,8 @@ async function executeImageGeneratorNode(
   const data = node.data as ImageGeneratorNodeData;
   const isPro = node.type === "imageGeneratorProNode";
   const nodeType = isPro ? "imageGeneratorPro" : "imageGeneratorFast";
-  // 使用画布感知的数据读取，解决画布切换问题
-  const { prompt, images } = getConnectedInputDataFromCanvas(node.id, canvasId);
+  // 使用画布感知的数据读取，解决画布切换问题（异步从文件加载图片）
+  const { prompt, images } = await getConnectedInputDataFromCanvas(node.id, canvasId);
 
   // 验证输入
   if (!prompt) {
@@ -281,8 +323,8 @@ async function executeLLMContentNode(
   signal?: AbortSignal
 ): Promise<NodeExecutionResult> {
   const data = node.data as LLMContentNodeData;
-  // 使用画布感知的数据读取，解决画布切换问题
-  const { prompt, files } = getConnectedInputDataFromCanvas(node.id, canvasId);
+  // 使用画布感知的数据读取，解决画布切换问题（异步从文件加载图片）
+  const { prompt, files } = await getConnectedInputDataFromCanvas(node.id, canvasId);
 
   // 验证输入
   if (!prompt && files.length === 0) {
@@ -367,8 +409,8 @@ async function executeVideoGeneratorNode(
   signal?: AbortSignal
 ): Promise<NodeExecutionResult> {
   const data = node.data as VideoGeneratorNodeData;
-  // 使用画布感知的数据读取，解决画布切换问题
-  const { prompt, images } = getConnectedInputDataFromCanvas(node.id, canvasId);
+  // 使用画布感知的数据读取，解决画布切换问题（异步从文件加载图片）
+  const { prompt, images } = await getConnectedInputDataFromCanvas(node.id, canvasId);
 
   // 验证输入
   if (!prompt) {
@@ -489,8 +531,8 @@ async function executePPTContentNode(
   _signal?: AbortSignal
 ): Promise<NodeExecutionResult> {
   const data = node.data as PPTContentNodeData;
-  // 使用画布感知的数据读取，解决画布切换问题
-  const { prompt, files } = getConnectedInputDataFromCanvas(node.id, canvasId);
+  // 使用画布感知的数据读取，解决画布切换问题（异步从文件加载图片）
+  const { prompt, files } = await getConnectedInputDataFromCanvas(node.id, canvasId);
 
   // 验证输入
   if (!prompt && files.length === 0) {

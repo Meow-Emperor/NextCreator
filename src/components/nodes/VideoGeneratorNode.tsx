@@ -58,7 +58,7 @@ const stageConfig: Record<VideoTaskStage, { label: string; color: string }> = {
 };
 
 export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoGeneratorNode>) => {
-  const { updateNodeData, getConnectedInputData, getEmptyConnectedInputs } = useFlowStore();
+  const { updateNodeData, getConnectedInputData, getConnectedInputDataAsync, getEmptyConnectedInputs } = useFlowStore();
   const activeCanvasId = useCanvasStore((state) => state.activeCanvasId);
   const [previewState, setPreviewState] = useState<"idle" | "loading" | "ready">("idle");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -126,7 +126,8 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
   }, [previewUrl]);
 
   const handleGenerate = useCallback(async () => {
-    const { prompt, images } = getConnectedInputData(id);
+    // 使用异步版本从文件按需加载图片数据
+    const { prompt, images } = await getConnectedInputDataAsync(id);
     // Sora 只支持单张图片输入，取第一张
     const image = images[0];
 
@@ -196,7 +197,7 @@ export const VideoGeneratorNode = memo(({ id, data, selected }: NodeProps<VideoG
         taskStage: "failed",
       });
     }
-  }, [id, currentModel, data.seconds, data.size, activeCanvasId, updateNodeData, getConnectedInputData, handleClosePreview]);
+  }, [id, currentModel, data.seconds, data.size, activeCanvasId, updateNodeData, getConnectedInputDataAsync, handleClosePreview]);
 
   const handleStop = useCallback(() => {
     // 取消任务管理器中的任务

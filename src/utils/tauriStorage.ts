@@ -8,6 +8,8 @@ import { isTauriEnvironment } from "@/services/fileStorageService";
 
 // Store 实例缓存
 let storeInstance: Awaited<ReturnType<typeof import("@tauri-apps/plugin-store").load>> | null = null;
+// Store 初始化 Promise，避免重复初始化
+let storeInitPromise: Promise<Awaited<ReturnType<typeof import("@tauri-apps/plugin-store").load>> | null> | null = null;
 
 // 获取或创建 Store 实例
 async function getStore() {
@@ -15,13 +17,31 @@ async function getStore() {
     return null;
   }
 
-  if (!storeInstance) {
-    const { load } = await import("@tauri-apps/plugin-store");
-    // 使用 load 函数加载或创建 store 文件
-    storeInstance = await load("app-data.json", { autoSave: true, defaults: {} });
+  // 如果正在初始化中，等待完成
+  if (storeInitPromise) {
+    return storeInitPromise;
   }
 
-  return storeInstance;
+  // 如果已经初始化完成，直接返回
+  if (storeInstance) {
+    return storeInstance;
+  }
+
+  // 开始初始化
+  storeInitPromise = (async () => {
+    try {
+      const { load } = await import("@tauri-apps/plugin-store");
+      // 使用 load 函数加载或创建 store 文件
+      storeInstance = await load("app-data.json", { autoSave: false, defaults: {} });
+      return storeInstance;
+    } catch (error) {
+      console.error("Failed to initialize Tauri store:", error);
+      storeInitPromise = null;
+      return null;
+    }
+  })();
+
+  return storeInitPromise;
 }
 
 // 获取数据
@@ -56,7 +76,8 @@ async function setItem(key: string, value: string): Promise<void> {
     if (store) {
       // Tauri 环境：写入 store
       await store.set(key, value);
-      // autoSave 已启用，无需手动 save
+      // 立即保存到磁盘，确保数据不丢失
+      await store.save();
     } else {
       // 浏览器环境：降级到 localStorage
       localStorage.setItem(key, value);
@@ -80,6 +101,8 @@ async function removeItem(key: string): Promise<void> {
     if (store) {
       // Tauri 环境：从 store 删除
       await store.delete(key);
+      // 立即保存到磁盘
+      await store.save();
     } else {
       // 浏览器环境：降级到 localStorage
       localStorage.removeItem(key);

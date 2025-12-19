@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 import type { CustomNode, CustomEdge, ImageGeneratorNodeData, ImageInputNodeData } from "@/types";
 import { tauriStorage } from "@/utils/tauriStorage";
-import { readImage, isTauriEnvironment } from "@/services/fileStorageService";
+import { isTauriEnvironment } from "@/services/fileStorageService";
 
 // 画布数据结构
 export interface CanvasData {
@@ -25,6 +25,8 @@ interface CanvasStore {
   activeCanvasId: string | null;
   // 侧边栏当前视图
   sidebarView: SidebarView;
+  // 标记是否已完成数据恢复（hydration）
+  _hasHydrated: boolean;
 
   // 画布操作
   createCanvas: (name?: string) => string;
@@ -49,6 +51,8 @@ export const useCanvasStore = create<CanvasStore>()(
       canvases: [],
       activeCanvasId: null,
       sidebarView: "canvases",
+      // 标记是否已完成数据恢复（hydration）
+      _hasHydrated: false,
 
       createCanvas: (name) => {
         const id = uuidv4();
@@ -146,6 +150,15 @@ export const useCanvasStore = create<CanvasStore>()(
     {
       name: "next-creator-canvases",
       storage: createJSONStorage(() => tauriStorage),
+      // 数据恢复完成后的回调
+      onRehydrateStorage: () => (_state, error) => {
+        // 无论成功还是失败，都标记 hydration 完成
+        // 这样应用可以继续正常工作
+        if (error) {
+          console.error("Canvas store hydration failed:", error);
+        }
+        useCanvasStore.setState({ _hasHydrated: true });
+      },
       partialize: (state) => {
         // 在 Tauri 环境中，清除有文件路径的节点的 base64 数据以减少存储大小
         // 在浏览器环境中，保留所有数据
@@ -196,73 +209,6 @@ export const useCanvasStore = create<CanvasStore>()(
           canvases: canvasesForStorage,
           activeCanvasId: state.activeCanvasId,
         };
-      },
-      onRehydrateStorage: () => async (state) => {
-        // 在加载后，从文件恢复图片数据
-        if (!state || !isTauriEnvironment()) return;
-
-        const updatedCanvases = await Promise.all(
-          state.canvases.map(async (canvas) => {
-            const updatedNodes = await Promise.all(
-              canvas.nodes.map(async (node) => {
-                // 图片生成节点：如有文件路径且缺失 base64，從文件恢復
-                if (
-                  (node.type === "imageGeneratorProNode" ||
-                    node.type === "imageGeneratorFastNode") &&
-                  (node.data as ImageGeneratorNodeData).outputImagePath &&
-                  !(node.data as ImageGeneratorNodeData).outputImage
-                ) {
-                  try {
-                    const path = (node.data as ImageGeneratorNodeData).outputImagePath!;
-                    const imageData = await readImage(path);
-                    return {
-                      ...node,
-                      data: {
-                        ...node.data,
-                        outputImage: imageData,
-                      },
-                    };
-                  } catch {
-                    console.warn("从文件恢复图片失败:", node.id);
-                    return node;
-                  }
-                }
-
-                // 图片输入节点：如有文件路径且缺失 base64，從文件恢復
-                if (
-                  node.type === "imageInputNode" &&
-                  (node.data as ImageInputNodeData).imagePath &&
-                  !(node.data as ImageInputNodeData).imageData
-                ) {
-                  try {
-                    const path = (node.data as ImageInputNodeData).imagePath!;
-                    const imageData = await readImage(path);
-                    return {
-                      ...node,
-                      data: {
-                        ...node.data,
-                        imageData,
-                      },
-                    };
-                  } catch {
-                    console.warn("从文件恢复图片失败:", node.id);
-                    return node;
-                  }
-                }
-
-                return node;
-              })
-            );
-
-            return {
-              ...canvas,
-              nodes: updatedNodes,
-            };
-          })
-        );
-
-        // 更新状态
-        useCanvasStore.setState({ canvases: updatedCanvases as CanvasData[] });
       },
     }
   )

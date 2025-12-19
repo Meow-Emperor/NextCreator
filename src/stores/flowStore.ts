@@ -19,6 +19,7 @@ import { validateConnection } from "@/utils/connectionValidator";
 import { WorkflowEngine } from "@/services/workflowEngine";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { toast } from "@/stores/toastStore";
+import { readImage } from "@/services/fileStorageService";
 
 // 历史记录状态（用于撤销/重做）
 interface HistoryState {
@@ -98,20 +99,35 @@ interface FlowStore {
   // 连接验证
   isValidConnection: IsValidConnection;
 
-  // 获取连接的节点数据（支持多图输入和文件输入）
+  // 获取连接的节点数据（支持多图输入和文件输入）- 同步版本，用于检测连接状态
   getConnectedInputData: (nodeId: string) => {
     prompt?: string;
     images: string[];
     files: Array<{ data: string; mimeType: string; fileName?: string }>;
   };
 
-  // 获取连接的图片详细信息（包含 ID、文件名、路径）
+  // 获取连接的节点数据 - 异步版本，从文件按需加载图片数据
+  getConnectedInputDataAsync: (nodeId: string) => Promise<{
+    prompt?: string;
+    images: string[];
+    files: Array<{ data: string; mimeType: string; fileName?: string }>;
+  }>;
+
+  // 获取连接的图片详细信息（包含 ID、文件名、路径）- 同步版本
   getConnectedImagesWithInfo: (nodeId: string) => Array<{
     id: string;
     fileName?: string;
     imageData: string;
     imagePath?: string;
   }>;
+
+  // 获取连接的图片详细信息 - 异步版本，从文件按需加载图片数据
+  getConnectedImagesWithInfoAsync: (nodeId: string) => Promise<Array<{
+    id: string;
+    fileName?: string;
+    imageData: string;
+    imagePath?: string;
+  }>>;
 
   // 获取连接的文件详细信息（包含 ID、文件名、MIME类型）
   getConnectedFilesWithInfo: (nodeId: string) => Array<{
@@ -935,6 +951,129 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
     return { prompt, images, files };
   },
 
+  // 获取连接的节点数据 - 异步版本，从文件按需加载图片数据
+  getConnectedInputDataAsync: async (nodeId) => {
+    const { nodes, edges } = get();
+    const incomingEdges = edges.filter((edge) => edge.target === nodeId);
+
+    let prompt: string | undefined;
+    const images: string[] = [];
+    const files: Array<{ data: string; mimeType: string; fileName?: string }> = [];
+
+    for (const edge of incomingEdges) {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if (!sourceNode) continue;
+
+      const targetHandle = edge.targetHandle;
+
+      if (targetHandle === "input-prompt") {
+        if (sourceNode.type === "promptNode") {
+          const data = sourceNode.data as { prompt?: string };
+          prompt = data.prompt;
+        } else if (sourceNode.type === "llmContentNode") {
+          const data = sourceNode.data as { outputContent?: string };
+          prompt = data.outputContent;
+        }
+      } else if (targetHandle === "input-image") {
+        // 从 image 输入端口连接的数据 - 按需从文件加载
+        let imageData: string | undefined;
+        if (sourceNode.type === "imageInputNode") {
+          const data = sourceNode.data as { imageData?: string; imagePath?: string };
+          // 优先从文件加载，否则使用内存中的数据
+          if (data.imagePath) {
+            try {
+              imageData = await readImage(data.imagePath);
+            } catch (err) {
+              console.warn("从文件加载图片失败:", err);
+              imageData = data.imageData;  // 回退到内存数据
+            }
+          } else {
+            imageData = data.imageData;
+          }
+        } else if (sourceNode.type === "imageGeneratorProNode" || sourceNode.type === "imageGeneratorFastNode") {
+          const data = sourceNode.data as { outputImage?: string; outputImagePath?: string };
+          // 优先从文件加载，否则使用内存中的数据
+          if (data.outputImagePath) {
+            try {
+              imageData = await readImage(data.outputImagePath);
+            } catch (err) {
+              console.warn("从文件加载图片失败:", err);
+              imageData = data.outputImage;  // 回退到内存数据
+            }
+          } else {
+            imageData = data.outputImage;
+          }
+        }
+        if (imageData) {
+          images.push(imageData);
+        }
+      } else if (targetHandle === "input-file") {
+        if (sourceNode.type === "fileUploadNode") {
+          const data = sourceNode.data as { fileData?: string; mimeType?: string; fileName?: string };
+          if (data.fileData && data.mimeType) {
+            files.push({
+              data: data.fileData,
+              mimeType: data.mimeType,
+              fileName: data.fileName,
+            });
+          }
+        }
+      } else {
+        // 兼容旧的没有 handle ID 的连接
+        if (sourceNode.type === "promptNode") {
+          const data = sourceNode.data as { prompt?: string };
+          prompt = data.prompt;
+        } else if (sourceNode.type === "llmContentNode") {
+          const data = sourceNode.data as { outputContent?: string };
+          prompt = data.outputContent;
+        } else if (sourceNode.type === "imageInputNode") {
+          const data = sourceNode.data as { imageData?: string; imagePath?: string };
+          let imageData: string | undefined;
+          if (data.imagePath) {
+            try {
+              imageData = await readImage(data.imagePath);
+            } catch (err) {
+              console.warn("从文件加载图片失败:", err);
+              imageData = data.imageData;
+            }
+          } else {
+            imageData = data.imageData;
+          }
+          if (imageData) {
+            images.push(imageData);
+          }
+        } else if (sourceNode.type === "imageGeneratorProNode" || sourceNode.type === "imageGeneratorFastNode") {
+          const data = sourceNode.data as { outputImage?: string; outputImagePath?: string };
+          let imageData: string | undefined;
+          if (data.outputImagePath) {
+            try {
+              imageData = await readImage(data.outputImagePath);
+            } catch (err) {
+              console.warn("从文件加载图片失败:", err);
+              imageData = data.outputImage;
+            }
+          } else {
+            imageData = data.outputImage;
+          }
+          if (imageData) {
+            images.push(imageData);
+          }
+        } else if (sourceNode.type === "fileUploadNode") {
+          const data = sourceNode.data as { fileData?: string; mimeType?: string; fileName?: string };
+          if (data.fileData && data.mimeType) {
+            files.push({
+              data: data.fileData,
+              mimeType: data.mimeType,
+              fileName: data.fileName,
+            });
+          }
+        }
+      }
+    }
+
+    return { prompt, images, files };
+  },
+
   // 获取连接的图片详细信息（包含 ID、文件名、路径）
   getConnectedImagesWithInfo: (nodeId) => {
     const { nodes, edges } = get();
@@ -967,6 +1106,72 @@ export const useFlowStore = create<FlowStore>((set, get) => ({
               id: sourceNode.id,
               fileName: data.label || `生成-${sourceNode.id.slice(0, 4)}`,
               imageData: data.outputImage,
+              imagePath: data.outputImagePath,
+            });
+          }
+        }
+      }
+    }
+
+    return images;
+  },
+
+  // 获取连接的图片详细信息 - 异步版本，从文件按需加载图片数据
+  getConnectedImagesWithInfoAsync: async (nodeId) => {
+    const { nodes, edges } = get();
+    const incomingEdges = edges.filter((edge) => edge.target === nodeId);
+
+    const images: Array<{ id: string; fileName?: string; imageData: string; imagePath?: string }> = [];
+
+    for (const edge of incomingEdges) {
+      const sourceNode = nodes.find((n) => n.id === edge.source);
+      if (!sourceNode) continue;
+
+      const targetHandle = edge.targetHandle;
+
+      // 只处理图片输入端口
+      if (targetHandle === "input-image" || !targetHandle) {
+        if (sourceNode.type === "imageInputNode") {
+          const data = sourceNode.data as { imageData?: string; fileName?: string; imagePath?: string };
+          let imageData: string | undefined;
+          // 优先从文件加载
+          if (data.imagePath) {
+            try {
+              imageData = await readImage(data.imagePath);
+            } catch (err) {
+              console.warn("从文件加载图片失败:", err);
+              imageData = data.imageData;
+            }
+          } else {
+            imageData = data.imageData;
+          }
+          if (imageData) {
+            images.push({
+              id: sourceNode.id,
+              fileName: data.fileName || `图片-${sourceNode.id.slice(0, 4)}`,
+              imageData,
+              imagePath: data.imagePath,
+            });
+          }
+        } else if (sourceNode.type === "imageGeneratorProNode" || sourceNode.type === "imageGeneratorFastNode") {
+          const data = sourceNode.data as { outputImage?: string; label?: string; outputImagePath?: string };
+          let imageData: string | undefined;
+          // 优先从文件加载
+          if (data.outputImagePath) {
+            try {
+              imageData = await readImage(data.outputImagePath);
+            } catch (err) {
+              console.warn("从文件加载图片失败:", err);
+              imageData = data.outputImage;
+            }
+          } else {
+            imageData = data.outputImage;
+          }
+          if (imageData) {
+            images.push({
+              id: sourceNode.id,
+              fileName: data.label || `生成-${sourceNode.id.slice(0, 4)}`,
+              imageData,
               imagePath: data.outputImagePath,
             });
           }

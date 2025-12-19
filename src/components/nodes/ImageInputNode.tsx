@@ -2,8 +2,9 @@ import { memo, useCallback, useRef, useState } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { ImagePlus, Upload, X, Maximize2 } from "lucide-react";
 import { useFlowStore } from "@/stores/flowStore";
+import { useCanvasStore } from "@/stores/canvasStore";
 import { ImagePreviewModal } from "@/components/ui/ImagePreviewModal";
-import { getImageUrl } from "@/services/fileStorageService";
+import { getImageUrl, saveImage, isTauriEnvironment } from "@/services/fileStorageService";
 import type { ImageInputNodeData } from "@/types";
 
 // 定义节点类型
@@ -23,13 +24,42 @@ export const ImageInputNode = memo(({ id, data, selected }: NodeProps<ImageInput
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = (reader.result as string).split(",")[1];
+        const { activeCanvasId } = useCanvasStore.getState();
 
-        // 延迟存储策略：只在内存中保留 base64，在生成时才保存到文件系统
-        updateNodeData<ImageInputNodeData>(id, {
-          imageData: base64,
-          fileName: file.name,
-          imagePath: undefined,  // 延迟保存，生成时才创建文件
-        });
+        // 内存优化：在 Tauri 环境中立即保存到文件系统，不在内存中保留 base64
+        if (isTauriEnvironment() && activeCanvasId) {
+          try {
+            const imageInfo = await saveImage(
+              base64,
+              activeCanvasId,
+              id,
+              undefined,
+              undefined,
+              "input"
+            );
+            // 只保存文件路径，不保存 base64 到内存
+            updateNodeData<ImageInputNodeData>(id, {
+              imageData: undefined,
+              fileName: file.name,
+              imagePath: imageInfo.path,
+            });
+          } catch (err) {
+            console.warn("保存图片到文件系统失败，回退到内存存储:", err);
+            // 回退：保存到内存
+            updateNodeData<ImageInputNodeData>(id, {
+              imageData: base64,
+              fileName: file.name,
+              imagePath: undefined,
+            });
+          }
+        } else {
+          // 非 Tauri 环境：保存到内存
+          updateNodeData<ImageInputNodeData>(id, {
+            imageData: base64,
+            fileName: file.name,
+            imagePath: undefined,
+          });
+        }
       };
       reader.readAsDataURL(file);
     },

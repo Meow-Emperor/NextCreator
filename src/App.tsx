@@ -15,7 +15,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import "@/index.css";
 
 function App() {
-  const { activeCanvasId, getActiveCanvas, createCanvas, updateCanvasData, canvases } = useCanvasStore();
+  const { activeCanvasId, getActiveCanvas, createCanvas, updateCanvasData, canvases, _hasHydrated } = useCanvasStore();
   const { nodes, edges, setNodes, setEdges } = useFlowStore();
   const theme = useSettingsStore((state) => state.settings.theme);
 
@@ -52,11 +52,12 @@ function App() {
   }, [theme]);
 
   // 初始化：如果没有画布，创建一个默认画布
+  // 重要：必须等待 hydration 完成后再检查，否则会覆盖存储中的数据
   useEffect(() => {
-    if (canvases.length === 0) {
+    if (_hasHydrated && canvases.length === 0) {
       createCanvas("默认画布");
     }
-  }, [canvases.length, createCanvas]);
+  }, [_hasHydrated, canvases.length, createCanvas]);
 
   // 切换画布时加载画布数据
   useEffect(() => {
@@ -83,10 +84,10 @@ function App() {
     if (isLoadingCanvasRef.current || !activeCanvasId) return;
 
     // 使用防抖来减少频繁更新
-    // 将间隔拉长到 800ms，避免拖动時頻繁寫入持久化存儲
+    // 300ms 延迟：平衡性能和数据安全，避免应用关闭时数据丢失
     const timer = setTimeout(() => {
       updateCanvasData(nodes, edges);
-    }, 800);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [nodes, edges, activeCanvasId, updateCanvasData]);

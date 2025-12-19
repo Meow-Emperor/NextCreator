@@ -60,7 +60,7 @@ function ImageGeneratorBase({
   selected,
   isPro,
 }: NodeProps<ImageGeneratorNode> & { isPro: boolean }) {
-  const { updateNodeData, getConnectedInputData, getEmptyConnectedInputs, getConnectedImagesWithInfo } = useFlowStore();
+  const { updateNodeData, getConnectedInputData, getConnectedInputDataAsync, getEmptyConnectedInputs, getConnectedImagesWithInfo } = useFlowStore();
   const [showPreview, setShowPreview] = useState(false);
   const [showErrorDetail, setShowErrorDetail] = useState(false);
 
@@ -130,7 +130,8 @@ function ImageGeneratorBase({
   }, [updateNodeData]);
 
   const handleGenerate = useCallback(async () => {
-    const { prompt, images } = getConnectedInputData(id);
+    // 使用异步版本从文件按需加载图片数据
+    const { prompt, images } = await getConnectedInputDataAsync(id);
     const { activeCanvasId } = useCanvasStore.getState();
 
     // 记录当前画布 ID
@@ -220,9 +221,10 @@ function ImageGeneratorBase({
               "generated"
             );
 
+            // 内存优化：只保存文件路径，不保存 base64 到内存
             updateNodeDataWithCanvas(id, {
               status: "success",
-              outputImage: response.imageData,
+              outputImage: undefined,  // 不再保存 base64 到内存
               outputImagePath: imageInfo.path,
               error: undefined,
             });
@@ -263,7 +265,7 @@ function ImageGeneratorBase({
         error: "生成失败",
       });
     }
-  }, [id, model, data.aspectRatio, data.imageSize, isPro, updateNodeDataWithCanvas, getConnectedInputData, getConnectedImagesWithInfo]);
+  }, [id, model, data.aspectRatio, data.imageSize, isPro, updateNodeDataWithCanvas, getConnectedInputDataAsync, getConnectedImagesWithInfo]);
 
   // 节点样式配置
   const headerGradient = isPro

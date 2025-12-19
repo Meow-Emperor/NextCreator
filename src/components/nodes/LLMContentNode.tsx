@@ -15,7 +15,7 @@ import type { LLMContentNodeData } from "@/types";
 type LLMContentNode = Node<LLMContentNodeData>;
 
 export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContentNode>) => {
-  const { updateNodeData, getConnectedInputData, getConnectedFilesWithInfo, getConnectedImagesWithInfo, getEmptyConnectedInputs } = useFlowStore();
+  const { updateNodeData, getConnectedInputData, getConnectedInputDataAsync, getConnectedFilesWithInfo, getConnectedImagesWithInfo, getEmptyConnectedInputs } = useFlowStore();
   const [copied, setCopied] = useState(false);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [showErrorDetail, setShowErrorDetail] = useState(false);
@@ -123,7 +123,8 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
 
   // 执行生成（支持流式）
   const handleGenerate = useCallback(async () => {
-    const { prompt, files, images } = getConnectedInputData(id);
+    // 使用异步版本从文件按需加载图片数据
+    const { prompt, files, images } = await getConnectedInputDataAsync(id);
     const { activeCanvasId } = useCanvasStore.getState();
 
     canvasIdRef.current = activeCanvasId;
@@ -186,7 +187,7 @@ export const LLMContentNode = memo(({ id, data, selected }: NodeProps<LLMContent
         error: "生成失败",
       });
     }
-  }, [id, data.model, data.systemPrompt, data.temperature, data.maxTokens, updateNodeDataWithCanvas, getConnectedInputData]);
+  }, [id, data.model, data.systemPrompt, data.temperature, data.maxTokens, updateNodeDataWithCanvas, getConnectedInputDataAsync]);
 
   // 复制内容
   const handleCopy = useCallback(() => {
