@@ -318,6 +318,193 @@ Color grading: nostalgic digital-camera tones, high contrast flash, subtle displ
         previewImage: "https://pbs.twimg.com/media/G6qMd2abwAA-hAi?format=jpg&name=900x900",
         nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
       },
+      {
+        id: "bathroom-mirror-selfie",
+        title: "浴室镜子自拍",
+        titleEn: "Bathroom Mirror Selfie",
+        description: "创建特定风格和构图的镜子自拍照",
+        prompt: `{
+  "subject": {
+    "description": "Young woman taking bathroom mirror selfie, innocent doe eyes but the outfit tells another story",
+    "mirror_rules": "facing mirror, hips slightly angled, close to mirror filling frame",
+    "age": "early 20s",
+    "expression": {
+      "eyes": "big innocent doe eyes looking up through lashes, 'who me?' energy",
+      "mouth": "soft pout, lips slightly parted, maybe tiny tongue touching corner",
+      "brows": "soft, slightly raised, faux innocent",
+      "overall": "angel face but devil body, the contrast is the whole point"
+    },
+    "hair": {
+      "color": "platinum blonde",
+      "style": "messy bun or claw clip, loose strands framing face, effortless"
+    },
+    "clothing": {
+      "top": {
+        "type": "ULTRA mini crop tee",
+        "color": "yellow",
+        "graphic": "single BANANA logo/graphic",
+        "fit": "barely containing chest, fabric stretched tight, ends just below, shows full stomach"
+      },
+      "bottom": {
+        "type": "tight tennis skort or athletic booty shorts",
+        "color": "white",
+        "material": "thin stretchy athletic fabric",
+        "fit": "vacuum tight, riding up, clinging, fabric creases visible"
+      }
+    },
+    "face": {
+      "features": "pretty - big eyes, small nose, full lips",
+      "makeup": "minimal, natural, lip gloss, no-makeup makeup"
+    }
+  },
+  "accessories": {
+    "headwear": {
+      "type": "Goorin Bros cap",
+      "details": "black with animal patch, worn backwards or tilted"
+    },
+    "headphones": {
+      "type": "over-ear white headphones",
+      "position": "around neck"
+    },
+    "device": {
+      "type": "iPhone",
+      "details": "visible in mirror, held at chest level"
+    }
+  },
+  "photography": {
+    "camera_style": "casual iPhone mirror selfie, NOT professional",
+    "quality": "iPhone camera - good but not studio, realistic social media quality",
+    "angle": "eye-level, straight on mirror",
+    "shot_type": "3/4 body, close to mirror",
+    "aspect_ratio": "9:16 vertical",
+    "texture": "natural, slightly grainy iPhone look, not over-processed"
+  },
+  "background": {
+    "setting": "regular apartment bathroom",
+    "style": "normal NYC apartment bathroom, not luxury",
+    "elements": ["white subway tile walls", "basic bathroom mirror with good lighting above", "simple white sink vanity", "toiletries visible", "towel hanging on hook", "maybe shower curtain edge visible", "small plant on counter"],
+    "atmosphere": "real bathroom, lived-in, normal home",
+    "lighting": "good vanity lighting above mirror - bright, even, flattering but not studio"
+  }
+}`,
+        tags: ["自拍", "镜子", "浴室", "社交媒体"],
+        source: "@gaucheai",
+        previewImage: "https://pbs.twimg.com/media/G7PebGOW8AALh2P?format=jpg&name=large",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "9:16" },
+      },
+      {
+        id: "character-selfie",
+        title: "电影角色合影",
+        titleEn: "Character Consistency Selfie with Movie Character",
+        description: "与电影角色自拍同时保持面部一致性",
+        prompt: `I'm taking a selfie with [movie character] on the set of [movie name].
+
+Keep the person exactly as shown in the reference image with 100% identical facial features, bone structure, skin tone, facial expression, pose, and appearance. 1:1 aspect ratio, 4K detail.`,
+        tags: ["电影", "自拍", "角色", "合影"],
+        source: "@rohanpaul_ai",
+        previewImage: "https://pbs.twimg.com/media/G7HwgjGaYAAgJ67?format=jpg&name=small",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "1:1" },
+      },
+      {
+        id: "canon-ixus-portrait",
+        title: "佳能IXUS美学人像",
+        titleEn: "Canon IXUS Aesthetic Portrait",
+        description: "创建佳能IXUS卡片相机风格的人像照片",
+        prompt: `{
+  "image_parameters": {
+    "style": "Canon IXUS aesthetic",
+    "type": "Point-and-shoot photography",
+    "quality": "Hyper-realistic",
+    "tone": "Sharp, direct",
+    "lighting_and_atmosphere": "Realistic, flash-style/direct lighting"
+  },
+  "subject": {
+    "constraints": {
+      "facial_identity": "Match reference image exactly 100%",
+      "face_edits": "None allowed"
+    },
+    "hair": {
+      "style": "Long, natural, lightly messy layered look",
+      "movement": "Blowing gently in the wind",
+      "details": "Strands slightly covering part of face"
+    },
+    "makeup": {
+      "cheeks_and_nose": "Soft pink blush with blurred effect",
+      "lips": "Subtle pink-orange tinted outline"
+    },
+    "expression": ["Cute", "Naive", "Cheerful", "Slightly sexy/undone charm"],
+    "pose": {
+      "body_position": "Half-sitting, half-standing",
+      "action": "Flicking hair"
+    },
+    "clothing": {
+      "top": "Black strapless top",
+      "bottom": "Low-waisted jeans with a floating waistline",
+      "neck": "Thin black fabric choker/wrap"
+    },
+    "accessories": ["Small pendant necklace", "Gold watch"]
+  },
+  "environment": {
+    "setting": "Modern pub",
+    "foreground_props": ["Round table", "Bottle of liquor", "Glass of liquor"]
+  }
+}`,
+        tags: ["IXUS", "卡片相机", "复古", "人像"],
+        source: "@lexx_aura",
+        previewImage: "https://pbs.twimg.com/media/G7U1z0CbQAE9zEq?format=jpg&name=medium",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+      },
+      {
+        id: "fisheye-matcha",
+        title: "鱼眼抹茶女孩",
+        titleEn: "Fisheye Matcha Girl",
+        description: "超广角鱼眼镜头拍摄的喝抹茶饮料的女孩",
+        prompt: `{
+  "scene": {
+    "environment": "sunny_boardwalk",
+    "details": "wooden_planks, colorful_stalls, people_walking, distant_umbrellas",
+    "lighting": "bright_midday_sun",
+    "sky": "clear_blue"
+  },
+  "camera": {
+    "lens": "ultra_wide_fisheye_12mm",
+    "distance": "very_close_up",
+    "distortion": "strong_exaggeration",
+    "angle": "slightly_low_upward"
+  },
+  "subject": {
+    "type": "young_person",
+    "gender": "neutral",
+    "expression": "curious_playful",
+    "eyes": "large_due_to_lens_distortion",
+    "pose": "leaning_forward_sipping_drink",
+    "clothing": {
+      "top": "bright_green_knit_sweater",
+      "accessory": "chunky_blue_sunglasses"
+    }
+  },
+  "drink": {
+    "type": "iced_matcha_latte",
+    "ice_cubes": "large_clear",
+    "cup": "transparent_plastic",
+    "straw": "green_white_spiral"
+  },
+  "effects": {
+    "depth_of_field": "shallow_foreground_sharp_background_soft",
+    "reflections": "glasses_show_boardwalk_and_people",
+    "color_grade": "clean_natural"
+  },
+  "composition": {
+    "focus": "face_extreme_closeup",
+    "mood": "funny_intimate_casual",
+    "background_elements": ["distant_people", "benches", "bright_shops"]
+  }
+}`,
+        tags: ["鱼眼", "抹茶", "广角", "人像"],
+        source: "@egeberkina",
+        previewImage: "https://pbs.twimg.com/media/G6_pAefWYAAilqz?format=jpg&name=large",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "3:4" },
+      },
     ],
   },
   {
@@ -552,6 +739,300 @@ Use a square 1080×1080 composition.Use a clean, neutral background. Ensure no e
         source: "@IamEmily2050",
         previewImage: "https://pbs.twimg.com/media/G65Uh3ebkAEqbv5?format=jpg&name=medium",
         nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "4:3" },
+      },
+      {
+        id: "cinematic-keyframe",
+        title: "电影关键帧生成器",
+        titleEn: "Cinematic Keyframe Generator",
+        description: "从参考图片生成电影级关键帧和故事板",
+        prompt: `<role>
+You are an award-winning trailer director + cinematographer + storyboard artist. Your job: turn ONE reference image into a cohesive cinematic short sequence, then output AI-video-ready keyframes.
+</role>
+
+<input>
+User provides: one reference image (image).
+</input>
+
+<non-negotiable rules - continuity & truthfulness>
+1) First, analyze the full composition: identify ALL key subjects (person/group/vehicle/object/animal/props/environment elements) and describe spatial relationships and interactions.
+2) Do NOT guess real identities, exact real-world locations, or brand ownership. Stick to visible facts.
+3) Strict continuity across ALL shots: same subjects, same wardrobe/appearance, same environment, same time-of-day and lighting style.
+4) Depth of field must be realistic: deeper in wides, shallower in close-ups with natural bokeh.
+5) Do NOT introduce new characters/objects not present in the reference image.
+</non-negotiable rules>
+
+<goal>
+Expand the image into a 10–20 second cinematic clip with a clear theme and emotional progression (setup → build → turn → payoff).
+</goal>
+
+<step 5 - contact sheet output>
+You MUST output ONE single master image: a Cinematic Contact Sheet / Storyboard Grid containing ALL keyframes in one large image.
+- Default grid: 3x3. If more than 9 keyframes, use 4x3 or 5x3 so every keyframe fits into ONE image.
+Requirements:
+1) The single master image must include every keyframe as a separate panel.
+2) Each panel must be clearly labeled: KF number + shot type + suggested duration.
+3) Strict continuity across ALL panels.
+</step 5>`,
+        tags: ["电影", "关键帧", "故事板", "视频"],
+        source: "@underwoodxie96",
+        previewImage: "https://pbs.twimg.com/media/G64FgZKXMAAXP_g?format=jpg&name=small",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "16:9" },
+      },
+      {
+        id: "photo-book-magazine",
+        title: "写真集风格杂志封面",
+        titleEn: "Photo Book Style Magazine Cover",
+        description: "创建充分利用9:16比例的写真集风格杂志封面，带精确坐标",
+        prompt: `Create a beautiful, photo book style magazine cover that fully utilizes the 9:16 aspect ratio. Place the attached person at the precise coordinates of [latitude/longitude coordinate], seamlessly blending them into the scene as if they are sightseeing. Approach this task with the understanding that this is a critical page that will significantly influence visitor numbers. NEGATIVE: coordinate texts`,
+        tags: ["杂志", "写真集", "封面", "旅行"],
+        source: "@minchoi",
+        previewImage: "https://pbs.twimg.com/media/G70ZJFCXcAAn3F2?format=jpg&name=medium",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "9:16" },
+      },
+      {
+        id: "floating-country-island",
+        title: "漂浮国家岛屿",
+        titleEn: "Floating Country Island Diorama",
+        description: "创建特定国家形状的漂浮微型岛屿立体模型",
+        prompt: `Create an ultra-HD, hyper-realistic digital poster of a floating miniature island shaped like [COUNTRY], resting on white clouds in the sky. Blend iconic landmarks, natural landscapes (like forests, mountains, or beaches), and cultural elements unique to [COUNTRY]. Carve "[COUNTRY]" into the terrain using large white 3D letters. Add artistic details like birds (native to [COUNTRY]), cinematic lighting, vivid colors, aerial perspective, and sun reflections to enhance realism. Ultra-quality, 4K+ resolution. 1080x1080 format.`,
+        tags: ["国家", "岛屿", "3D", "立体模型"],
+        source: "@TechieBySA",
+        previewImage: "https://pbs.twimg.com/media/G75EwP0WkAEpIbm?format=jpg&name=medium",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "1:1" },
+      },
+      {
+        id: "novel-scene-poster",
+        title: "小说场景3D海报",
+        titleEn: "Novel Scene 3D Poster",
+        description: "为小说或电影创建微型立体模型风格的3D海报",
+        prompt: `Design a high-quality 3D poster for the movie/novel "[Name to be added]", first retrieving information about the movie/novel and famous scenes.
+
+First, please use your knowledge base to retrieve information about this movie/novel and find a representative famous scene or core location. In the center of the image, construct this scene as a delicate axonometric 3D miniature model. The style should adopt DreamWorks Animation's delicate and soft rendering style. You need to reproduce the architectural details, character dynamics, and environmental atmosphere of that time.
+
+Regarding the background, do not use a simple pure white background. Please create a void environment with faint ink wash diffusion and flowing light mist around the model, with elegant colors, making the image look breathable and have depth.
+
+Finally, for the bottom layout, please generate Chinese text. Center the novel title with a font that matches the original style. Below the title, automatically retrieve and typeset a classic description or quote about this scene from the original work.`,
+        tags: ["小说", "电影", "3D海报", "立体模型"],
+        source: "@op7418",
+        previewImage: "https://pbs.twimg.com/media/G7uUpDraQAAC1ty?format=jpg&name=large",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "3:4" },
+      },
+      {
+        id: "miniature-swimming-pool",
+        title: "微型游泳池立体模型",
+        titleEn: "Miniature Swimming Pool Diorama",
+        description: "超现实微型世界拼贴海报，将容器变成游泳池",
+        prompt: `Surreal miniature-world collage poster featuring an oversized open blue Nivea-style tin repurposed as a whimsical swimming pool filled with glossy white "cream-water."
+Tiny sunbathers float in pastel swim rings, lounge on miniature deck chairs, and slide into the cream pool from a small blue slide.
+The background is a soft, warm, lightly textured countertop surface subtle marble or matte stone, evenly lit, no heavy veins or visual noise.
+Keep the scene grounded with soft shadows beneath props and figures.
+Surrounding the tin, keep the playful diorama elements: a small wooden deck with micro figures, pastel umbrellas, lounge chairs, and compact handcrafted accessories. Maintain the hovering pastel inflatables and plush cloud-like shapes, but ensure they feel like stylised decorative objects staged above the countertop.
+Preserve the soft, high-saturation, toy-like aesthetic with plush textures, pastel gradients, and gentle lighting.`,
+        tags: ["微型", "游泳池", "立体模型", "超现实"],
+        source: "@Salmaaboukarr",
+        previewImage: "https://pbs.twimg.com/media/G7u3urdXEAA3R5K?format=jpg&name=small",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "1:1" },
+      },
+      {
+        id: "christmas-ornament-3d",
+        title: "圣诞装饰球3D角色",
+        titleEn: "Christmas Ornament 3D Character",
+        description: "将自己变成圣诞装饰球内的可爱3D角色",
+        prompt: `A transparent Christmas bauble hanging by a red ribbon. Inside, a tiny diorama of the person from the reference reimagined as a cute 3d chibi character. He works at a mini futuristic AI desk with three glowing holo-screens showing neural networks and code. Add tiny plants, a mini coffee cup, soft desk lighting, floating UI icons, and snow-glitter at the base. Warm magical Christmas glow, cinematic reflections on glass, cozy high-end diorama aesthetic.
+
+Cinematic lighting, shallow depth of field, soft reflections on the glass, ultra-polished materials, high detail, festive Christmas atmosphere. Whimsical, premium, and heartwarming.`,
+        tags: ["圣诞", "装饰球", "3D", "Q版"],
+        source: "@CharaspowerAI",
+        previewImage: "https://pbs.twimg.com/media/G7vbusrWUAA8omH?format=jpg&name=large",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "1:1" },
+      },
+      {
+        id: "ironing-wrinkles",
+        title: "超现实熨斗去皱",
+        titleEn: "Ironing Out Wrinkles",
+        description: "用微型熨斗熨平皱纹的超现实抗衰老概念图",
+        prompt: `{
+  "prompt": "An award-winning, hyper-realist macro photograph in the style of high-concept editorial art. The image features an extreme close-up of an elderly woman's eye and cheekbone. A miniature, toy-like white and blue clothes iron is positioned on her skin, actively pressing down and ironing out deep wrinkles and crow's feet, leaving a streak of unnaturally smooth skin in its wake. A thin white cord trails organically across the texture of her face. The image demands microscopic clarity, capturing mascara clumps, skin pores, and vellus hairs. The lighting is an unforgiving, high-contrast hard flash typical of avant-garde fashion photography.",
+  "subject_details": {
+    "main_subject": "Elderly woman's face (Macro topography of aging skin)",
+    "object": "Miniature white and blue iron with realistic plastic textures and a trailing cord",
+    "action": "The iron is creating a visible, flattened path through the wrinkles"
+  },
+  "artistic_style": {
+    "genre": ["Contemporary Pop-Surrealism", "Satirical Editorial", "Visual Metaphor"],
+    "aesthetic": ["Maurizio Cattelan style", "Vivid Color", "Commercial Kitsch", "Tactile Realism"],
+    "lighting": "Studio Ring Flash, High-Key, Hard Shadows, Glossy finish"
+  },
+  "mood": "Provocative, satirical, disturbingly pristine, humorous yet critical"
+}`,
+        tags: ["超现实", "抗衰老", "微型", "概念艺术"],
+        source: "@egeberkina",
+        previewImage: "https://pbs.twimg.com/media/G7b8YyVXQAALtxS?format=jpg&name=large",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "4:3" },
+      },
+      {
+        id: "perfectly-isometric",
+        title: "完美等距摄影",
+        titleEn: "Perfectly Isometric Photography",
+        description: "创建碰巧完美等距的捕捉照片",
+        prompt: `Make a photo that is perfectly isometric. It is not a miniature, it is a captured photo that just happened to be perfectly isometric. It is a photo of [subject].`,
+        tags: ["等距", "摄影", "几何", "构图"],
+        source: "@NanoBanana",
+        previewImage: "https://pbs.twimg.com/media/G7qgKDPX0AAEGS9?format=jpg&name=small",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "1:1" },
+      },
+      {
+        id: "wide-angle-phone-edit",
+        title: "极端广角手机编辑",
+        titleEn: "Extreme Wide Angle Phone Screen Replacement",
+        description: "用极端广角编辑照片并替换手机屏幕内容",
+        prompt: `{
+  "edit_type": "extreme_wide_angle_phone_edit",
+  "source": {
+    "_hint": "Base for editing the person, clothing, and atmosphere of the original image. No new characters allowed.",
+    "mode": "EDIT",
+    "preserve_elements": ["Person", "Face", "Hairstyle", "Clothing", "Environment style"],
+    "change_rules": {
+      "camera_angle": "Ultra-wide or fisheye lens (equivalent to 12-18mm)",
+      "angle_options": ["Looking up from directly in front", "Looking down from directly in front", "Extreme low angle", "High angle", "Tilted composition"],
+      "perspective_effect": "Nearby objects are exaggerated, distant objects become smaller",
+      "body_parts_close_to_camera": "Bring 1-3 body parts extremely close to the camera",
+      "pose_variety": ["Extending one hand/leg toward the camera", "Squatting or lying on stomach halfway", "Sitting on the ground or an object", "Lying on the ground with legs pointed at camera", "Leaning body sharply toward the camera", "Twisting body for dynamic pose"]
+    },
+    "phone_handling": {
+      "allowed": true,
+      "grip_options": ["One-handed", "Two-handed", "Low angle", "High angle", "Tilted", "Sideways", "Close to chest", "Close to waist", "Casual grip"],
+      "screen_replacement": {
+        "target": "Only the smartphone screen portion displayed in the image",
+        "source": "Second reference image",
+        "fitting_rules": "Strictly match the screen shape, no stretching or compression"
+      }
+    },
+    "environment_consistency": {
+      "location": "Maintain the same location as the original image",
+      "lighting": "Maintain direction and intensity"
+    }
+  }
+}`,
+        tags: ["广角", "手机", "编辑", "鱼眼"],
+        source: "@qisi_ai",
+        previewImage: "https://pbs.twimg.com/media/G7gEwj8bIAAcFM2?format=jpg&name=small",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "9:16" },
+      },
+      {
+        id: "shop-window-cartoon",
+        title: "橱窗卡通倒影",
+        titleEn: "Shop Window Cartoon Reflection",
+        description: "创建站在橱窗旁边的照片，橱窗内显示卡通版本",
+        prompt: `{
+  "PROMPT": "Create a bright, high-end street-fashion photograph of the woman from the reference image, keeping her face, hair, body & outfit exactly the same. She stands outside a luxury toy-shop window, gently touching the glass. Inside the window display, place a full-height cartoon-style doll designed to resemble her—same features, hair, and outfit—transformed into a cute, big-eyed, stylized animated character. Crisp lighting, premium street-fashion look, realistic reflections, face unchanged.",
+  "settings": {
+    "style": "high-end street fashion",
+    "lighting": "crisp and bright",
+    "environment": "outside luxury toy-shop window",
+    "subject": "woman from reference image",
+    "focus": ["face", "hair", "body", "outfit"],
+    "additional_elements": [
+      {
+        "type": "doll",
+        "style": "cartoon-style, big-eyed, stylized",
+        "location": "inside window display",
+        "resemblance": "exact features, hair, outfit of woman"
+      }
+    ],
+    "reflections": "realistic",
+    "photorealism": true
+  }
+}`,
+        tags: ["橱窗", "卡通", "倒影", "街拍"],
+        source: "@xmiiru_",
+        previewImage: "https://pbs.twimg.com/media/G7drMCfXkAAN3w0?format=jpg&name=large",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "3:4" },
+      },
+      {
+        id: "urban-3d-led",
+        title: "城市3D LED显示屏",
+        titleEn: "Urban 3D LED Display",
+        description: "在城市环境中创建大型L形3D LED屏幕场景",
+        prompt: `An enormous L-shaped glasses-free 3D LED screen situated prominently at a bustling urban intersection, designed in an iconic architectural style reminiscent of Shinjuku in Tokyo or Taikoo Li in Chengdu. The screen displays a captivating glasses-free 3D animation featuring [scene description]. The characters and objects possess striking depth and appear to break through the screen's boundaries, extending outward or floating vividly in mid-air. Under realistic daylight conditions, these elements cast lifelike shadows onto the screen's surface and surrounding buildings. Rich in intricate detail and vibrant colors, the animation seamlessly integrates with the urban setting and the bright sky overhead.
+
+----
+scene description:
+[An adorable giant kitten playfully paws at passing pedestrians, its fluffy paws and curious face extending realistically into the space around the screen.]`,
+        tags: ["3D", "LED", "城市", "裸眼3D"],
+        source: "@dotey",
+        previewImage: "https://pbs.twimg.com/media/G7jPBxmXwAA7igN?format=jpg&name=small",
+        nodeTemplate: { requiresImageInput: false, generatorType: "pro", aspectRatio: "16:9" },
+      },
+      {
+        id: "trans-dimensional-pour",
+        title: "跨维度液体倾倒",
+        titleEn: "Trans-Dimensional Liquid Pour",
+        description: "物理世界的液体倾倒进数字屏幕的超现实场景",
+        prompt: `{
+  "meta": {
+    "type": "Creative Brief",
+    "genre": "Hyper-realistic Surrealism",
+    "composition_style": "Composite Portrait"
+  },
+  "scene_architecture": {
+    "viewpoint": {
+      "type": "Photographic",
+      "angle": "High-angle / Looking down",
+      "framing": "Tight on central subject"
+    },
+    "dimensional_hierarchy": {
+      "rule": "Scale disparity for surreal effect",
+      "dominant_element": "iPhone 17 Pro Max (Super-scaled)",
+      "subordinate_elements": ["Blue Book (Miniature)", "Pen (Miniature)"]
+    }
+  },
+  "realm_physical": {
+    "description": "The real-world environment surrounding the device.",
+    "environment": {
+      "surface": "Wooden table",
+      "texture_attributes": ["rich grain", "tactile", "worn"]
+    },
+    "active_agent": {
+      "identity": "Human Hand (Real)",
+      "action": "Pouring"
+    },
+    "held_object": {
+      "item": "Bottle",
+      "state": "Chilled (visible condensation)",
+      "contents": {
+        "substance": "Water",
+        "color": "Light Green",
+        "state": "Liquid flow"
+      }
+    }
+  },
+  "realm_digital": {
+    "description": "The content displayed on the screen.",
+    "container_device": {
+      "model": "iPhone 17 Pro Max",
+      "state": "Screen ON"
+    },
+    "screen_content": {
+      "subject_identity": "Person from reference image",
+      "expression": "Happy / Smiling",
+      "held_object_digital": {
+        "item": "Drinking Glass",
+        "initial_state": "Empty (waiting for pour)"
+      }
+    }
+  },
+  "surreal_bridge_event": {
+    "description": "The interaction connecting the physical and digital realms.",
+    "action_type": "Trans-dimensional Fluid Dynamics",
+    "source": "Physical bottle contents",
+    "destination": "Digital glass in screen"
+  }
+}`,
+        tags: ["跨维度", "液体", "超现实", "手机"],
+        source: "@YaseenK7212",
+        previewImage: "https://pbs.twimg.com/media/G7Uz7jZXoAAGEV0?format=jpg&name=900x900",
+        nodeTemplate: { requiresImageInput: true, generatorType: "pro", aspectRatio: "4:5" },
       },
     ],
   },
